@@ -12,6 +12,7 @@ import { useReverseTransaction } from "@/features/transactions/mutations";
 import { useTransactionHistory } from "@/features/transactions/queries";
 import { TransactionStatusBadge } from "@/features/transactions/components/transaction-status-badge";
 import type { Transaction } from "@/features/transactions/types";
+import { AuthGate } from "@/features/auth/components/auth-gate";
 
 type Props = { accountId?: string; page: number; size: number; sort: string };
 

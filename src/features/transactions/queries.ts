@@ -1,5 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getTransactionHistory, type TransactionHistoryParams } from "@/features/transactions/api";
+import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 
 export const transactionKeys = {
   all: ["transactions"] as const,
@@ -16,5 +17,6 @@ export function transactionHistoryOptions(params: TransactionHistoryParams) {
 }
 
 export function useTransactionHistory(params: TransactionHistoryParams) {
-  return useQuery(transactionHistoryOptions(params));
+  const session = useAuthSession();
+  return useQuery({ ...transactionHistoryOptions(params), queryFn: () => getTransactionHistory(params, session.request), enabled: session.status === "authenticated" && Boolean(params.accountId) });
 }
