@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+:root {
+  --aries-accent: #00bfff;
+  --aries-accent-foreground: #06202b;
+  --aries-background: #f4f7fa;
+  --aries-surface: #ffffff;
+  --aries-surface-muted: #edf2f6;
+  --aries-foreground: #17212b;
+  --aries-muted: #5d6a75;
+  --aries-border: #d8e1e8;
+  --aries-success: #18794e;
+  --aries-warning: #9a6700;
+  --aries-danger: #b42318;
+  --aries-pending: #6b4eff;
+}
+
+@theme inline {
+  --color-background: var(--aries-background);
+  --color-surface: var(--aries-surface);
+  --color-surface-muted: var(--aries-surface-muted);
+  --color-foreground: var(--aries-foreground);
+  --color-muted: var(--aries-muted);
+  --color-border: var(--aries-border);
+  --color-accent: var(--aries-accent);
+  --color-accent-foreground: var(--aries-accent-foreground);
+  --font-sans: "Segoe UI", Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--aries-background);
+  color: var(--aries-foreground);
+  font-family: var(--font-sans);
+}
+
+button, a { -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--aries-accent) 70%, white); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }

@@ -1,0 +1,13 @@
+node_modules
+.pnpm-store
+.next
+out
+.env*
+!.env.example
+*.tsbuildinfo
+coverage
+
+# AI agent
+.agents/
+AGENTS.md
+
