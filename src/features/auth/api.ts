@@ -1,12 +1,12 @@
 import { apiRequest } from "@/lib/api/client";
-import type { AuthResponse, AuthUser, LoginCredentials } from "@/features/auth/types";
+import { parseAuthResponse, type AuthUser, type LoginCredentials } from "@/features/auth/types";
 
 export function login(credentials: LoginCredentials) {
-  return apiRequest<AuthResponse>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(credentials) });
+  return apiRequest<unknown>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(credentials) }).then(parseAuthResponse);
 }
 
 export function refreshSession() {
-  return apiRequest<AuthResponse>("/api/v1/auth/refresh", { method: "POST" });
+  return apiRequest<unknown>("/api/v1/auth/refresh", { method: "POST" }).then(parseAuthResponse);
 }
 
 export function getCurrentUser(accessToken: string) {

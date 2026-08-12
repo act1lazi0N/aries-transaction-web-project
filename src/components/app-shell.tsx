@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Activity, ArrowLeftRight, Bell, LayoutDashboard, Settings, ShieldCheck } from "lucide-react";
+import { SessionControls } from "@/features/auth/components/session-controls";
 
 const navigation = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -15,6 +16,6 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       <nav aria-label="Primary navigation" className="space-y-1">{navigation.map(({ href, label, icon: Icon }) => <Link key={href} href={href as Route} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground ${href === "/" ? "bg-surface-muted font-medium text-foreground" : ""}`}><Icon aria-hidden="true" size={18} />{label}</Link>)}</nav>
       <div className="mt-8 border-t border-border pt-4"><Link href={"/settings" as Route} className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-muted hover:bg-surface-muted hover:text-foreground"><Settings aria-hidden="true" size={18} />Settings</Link></div>
     </aside>
-    <div className="min-w-0"><header className="flex h-16 items-center justify-between border-b border-border bg-surface px-6 lg:px-10"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">Workspace</p><p className="text-sm font-medium">Financial operations</p></div><button type="button" aria-label="View notifications" className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground"><Bell aria-hidden="true" size={19} /></button></header><main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">{children}</main></div>
+    <div className="min-w-0"><header className="flex h-16 items-center justify-between border-b border-border bg-surface px-6 lg:px-10"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">Workspace</p><p className="text-sm font-medium">Financial operations</p></div><div className="flex items-center gap-2"><button type="button" aria-label="View notifications" className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground"><Bell aria-hidden="true" size={19} /></button><SessionControls /></div></header><main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">{children}</main></div>
   </div>;
 }
