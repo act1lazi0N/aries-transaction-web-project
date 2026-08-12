@@ -12,7 +12,6 @@ type AuthSessionValue = {
   status: AuthStatus;
   user: AuthUser | null;
   error: ApiError | null;
-  accessToken: string | null;
   signIn: (credentials: LoginCredentials) => Promise<void>;
   signOut: () => Promise<void>;
   request: <T>(path: string, options?: AuthRequestOptions) => Promise<T>;
@@ -80,7 +79,7 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
     }
   }, [accessToken, refresh]);
 
-  const value = useMemo<AuthSessionValue>(() => ({ status, user, error, accessToken, signIn, signOut, request }), [status, user, error, accessToken, signIn, signOut, request]);
+  const value = useMemo<AuthSessionValue>(() => ({ status, user, error, signIn, signOut, request }), [status, user, error, signIn, signOut, request]);
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
 }
 

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
+import { userFacingErrorMessage } from "@/lib/api/errors";
 
 export function LoginForm() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export function LoginForm() {
     event.preventDefault(); setFormError(null);
     if (!email.trim() || !password) { setFormError("Enter your email and password."); return; }
     try { await session.signIn({ email: email.trim(), password }); }
-    catch (error) { setFormError(error instanceof Error ? error.message : "Sign in failed. Try again."); }
+    catch (error) { setFormError(userFacingErrorMessage(error, "Sign in failed. Try again.")); }
   }
 
   return <form onSubmit={submit} noValidate className="space-y-5" aria-describedby={formError ? "login-error" : undefined}>
