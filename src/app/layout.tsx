@@ -3,7 +3,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/app-providers";
 
 export const metadata: Metadata = {
-  title: "Aries | Transaction workspace",
+  title: "ATC project | Financial operations",
   description: "A calm, precise workspace for financial operations.",
 };
 
