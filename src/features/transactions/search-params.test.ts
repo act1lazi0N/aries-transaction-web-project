@@ -9,4 +9,8 @@ describe("parseTransactionSearchParams", () => {
   it("falls back safely for invalid or unsafe pagination", () => {
     expect(parseTransactionSearchParams({ page: "-1", size: "1000", sort: undefined })).toEqual({ page: 0, size: 20, sort: "createdAt,desc" });
   });
+
+  it("preserves a restorable transaction detail id", () => {
+    expect(parseTransactionSearchParams(new URLSearchParams("accountId=account-1&transactionId=tx-1"))).toMatchObject({ accountId: "account-1", transactionId: "tx-1" });
+  });
 });

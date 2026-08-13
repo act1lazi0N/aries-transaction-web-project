@@ -2,19 +2,19 @@
 
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { AlertTriangle, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, Copy, RefreshCw } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApiError } from "@/lib/api/errors";
 import { useReverseTransaction } from "@/features/transactions/mutations";
-import { useTransactionHistory } from "@/features/transactions/queries";
+import { useTransactionDetail, useTransactionHistory } from "@/features/transactions/queries";
 import { TransactionStatusBadge } from "@/features/transactions/components/transaction-status-badge";
 import { toTransactionLifecycle, type Transaction } from "@/features/transactions/types";
 import { AuthGate } from "@/features/auth/components/auth-gate";
 
-type Props = { accountId?: string; page: number; size: number; sort: string };
+type Props = { accountId?: string; transactionId?: string; page: number; size: number; sort: string };
 
 function formatAmount(value: string, currency: string) {
   if (!/^-?\d+(?:\.\d+)?$/.test(value)) return `${value} ${currency}`;
@@ -44,7 +44,7 @@ function idempotencyKey() {
   return globalThis.crypto?.randomUUID?.() ?? `aries-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function TransactionWorkspace({ accountId, page, size, sort }: Props) {
+export function TransactionWorkspace({ accountId, transactionId, page, size, sort }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const [selected, setSelected] = useState<Transaction | null>(null);
@@ -53,21 +53,22 @@ export function TransactionWorkspace({ accountId, page, size, sort }: Props) {
   const reverseMutation = useReverseTransaction();
   const query = useTransactionHistory({ accountId: accountId ?? "", page, size, sort });
 
-  const updateUrl = (next: Partial<Props>) => {
+  const updateUrl = useCallback((next: Partial<Props>) => {
     const params = new URLSearchParams();
-    const values = { accountId, page, size, sort, ...next };
+    const values = { accountId, transactionId, page, size, sort, ...next };
     if (values.accountId) params.set("accountId", values.accountId);
+    if (values.transactionId) params.set("transactionId", values.transactionId);
     params.set("page", String(values.page)); params.set("size", String(values.size)); params.set("sort", values.sort);
     router.replace(`${pathname}?${params.toString()}` as Route, { scroll: false });
-  };
+  }, [accountId, page, pathname, router, size, sort, transactionId]);
 
   const columns = useMemo<ColumnDef<Transaction>[]>(() => [
-    { accessorKey: "id", header: "Transaction", cell: ({ row }) => <TransactionIdentifier value={row.original.id} /> },
+    { accessorKey: "id", header: "Transaction", cell: ({ row }) => <TransactionIdentifier value={row.original.id} onOpen={() => updateUrl({ transactionId: row.original.id })} /> },
     { accessorKey: "amount", header: "Amount", cell: ({ row }) => <span className="font-mono tabular-nums">{formatAmount(row.original.amount, row.original.currency)}</span> },
     { accessorKey: "status", header: "Status", cell: ({ row }) => <TransactionStatusBadge transaction={row.original} /> },
     { accessorKey: "createdAt", header: "Created", cell: ({ row }) => <time dateTime={row.original.createdAt}>{formatDate(row.original.createdAt)}</time> },
     { id: "action", header: "Action", cell: ({ row }) => row.original.status === "COMPLETED" ? <Button variant="secondary" className="min-h-9 px-3 text-xs" onClick={event => { reversalTriggerRef.current = event.currentTarget; reverseMutation.reset(); setReversalKey(idempotencyKey()); setSelected(row.original); }}>Review reversal</Button> : <span className="text-xs text-muted">No action</span> },
-  ], [reverseMutation]);
+  ], [reverseMutation, updateUrl]);
   const table = useReactTable({ data: query.data?.content ?? [], columns, getCoreRowModel: getCoreRowModel(), getRowId: row => row.id });
 
   if (!accountId) return <EmptyState title="Select an account to view transactions" detail="The API requires an account identifier. No transaction or balance data is inferred without one." />;
@@ -82,18 +83,24 @@ export function TransactionWorkspace({ accountId, page, size, sort }: Props) {
     <div className="overflow-x-auto rounded-2xl border border-border bg-surface"><Table><TableHeader><TableRow>{table.getHeaderGroups()[0]?.headers.map(header => <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>)}</TableRow></TableHeader><TableBody>{table.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>)}</TableBody></Table></div>
     <div className="flex items-center justify-between"><p className="text-sm text-muted">Page {page + 1} of {Math.max(query.data.totalPages, 1)}</p><div className="flex gap-2"><Button variant="secondary" onClick={() => updateUrl({ page: page - 1 })} disabled={page <= 0}><ChevronLeft aria-hidden="true" size={16} />Previous</Button><Button variant="secondary" onClick={() => updateUrl({ page: page + 1 })} disabled={query.data.last}><ChevronRight aria-hidden="true" size={16} />Next</Button></div></div>
     {selected && reversalKey && <ReversalDialog transaction={selected} result={reverseMutation.data} isPending={reverseMutation.isPending} error={reverseMutation.error} returnFocusRef={reversalTriggerRef} onClose={() => { if (!reverseMutation.isPending) { setSelected(null); setReversalKey(null); reverseMutation.reset(); } }} onConfirm={() => reverseMutation.mutate({ transactionId: selected.id, idempotencyKey: reversalKey })} />}
+    {transactionId && <TransactionDetail transactionId={transactionId} onClose={() => updateUrl({ transactionId: undefined })} />}
   </div>;
 }
 
 function LoadingState() { return <div role="status" aria-label="Loading transactions" className="space-y-3 rounded-2xl border border-border bg-surface p-6"><div className="h-5 w-36 animate-pulse rounded bg-surface-muted" /><div className="h-52 animate-pulse rounded-xl bg-surface-muted" /></div>; }
 function EmptyState({ title, detail }: { title: string; detail: string }) { return <div className="rounded-2xl border border-dashed border-border bg-surface p-10 text-center"><p className="font-medium">{title}</p><p className="mt-2 text-sm leading-6 text-muted">{detail}</p></div>; }
-function TransactionIdentifier({ value }: { value: string }) {
+function TransactionIdentifier({ value, onOpen }: { value: string; onOpen: () => void }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     try { await navigator.clipboard.writeText(value); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }
     catch { setCopied(false); }
   }
-  return <span className="inline-flex items-center gap-1"><span className="font-mono text-xs" title={value}>{value.slice(0, 8)}…</span><Button type="button" variant="ghost" className="min-h-7 px-1.5" aria-label={copied ? "Transaction ID copied" : "Copy transaction ID"} title={value} onClick={() => void copy()}>{copied ? <Check aria-hidden="true" size={14} /> : <Copy aria-hidden="true" size={14} />}</Button></span>;
+  return <span className="inline-flex items-center gap-1"><Button type="button" variant="ghost" className="min-h-7 px-1 font-mono text-xs" aria-label="Open transaction details" title={value} onClick={onOpen}>{value.slice(0, 8)}…</Button><Button type="button" variant="ghost" className="min-h-7 px-1.5" aria-label={copied ? "Transaction ID copied" : "Copy transaction ID"} title={value} onClick={() => void copy()}>{copied ? <Check aria-hidden="true" size={14} /> : <Copy aria-hidden="true" size={14} />}</Button></span>;
+}
+
+function TransactionDetail({ transactionId, onClose }: { transactionId: string; onClose: () => void }) {
+  const query = useTransactionDetail(transactionId);
+  return <section aria-labelledby="transaction-detail-title" className="rounded-2xl border border-border bg-surface p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-sm font-medium text-accent">Authoritative detail</p><h2 id="transaction-detail-title" className="mt-1 text-xl font-semibold">Transaction details</h2></div><Button variant="ghost" onClick={onClose}>Close</Button></div>{query.isPending && <p role="status" className="mt-5 text-sm text-muted">Loading the latest backend status…</p>}{query.isError && <div role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-[var(--aries-danger)]">The latest transaction status could not be loaded. No status is inferred. <Button variant="secondary" className="mt-3" onClick={() => void query.refetch()}>Retry</Button></div>}{query.data && <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-muted">Transaction</dt><dd className="mt-1 break-all font-mono text-xs">{query.data.id}</dd></div><div><dt className="text-muted">Status</dt><dd className="mt-1"><TransactionStatusBadge transaction={query.data} /></dd></div><div><dt className="text-muted">Amount</dt><dd className="mt-1 font-mono font-semibold">{formatAmount(query.data.amount, query.data.currency)}</dd></div><div><dt className="text-muted">Currency</dt><dd className="mt-1">{query.data.currency}</dd></div><div><dt className="text-muted">Source account</dt><dd className="mt-1 break-all font-mono text-xs">{query.data.fromAccountId}</dd></div><div><dt className="text-muted">Destination account</dt><dd className="mt-1 break-all font-mono text-xs">{query.data.toAccountId}</dd></div><div><dt className="text-muted">Created</dt><dd className="mt-1"><time dateTime={query.data.createdAt}>{formatDate(query.data.createdAt)}</time></dd></div>{query.data.completedAt && <div><dt className="text-muted">Completed</dt><dd className="mt-1"><time dateTime={query.data.completedAt}>{formatDate(query.data.completedAt)}</time></dd></div>}</dl>}</section>;
 }
 function ErrorState({ error, onRetry }: { error: Error; onRetry: () => void }) { const apiError = error instanceof ApiError ? error : null; const denied = apiError?.kind === "forbidden" || apiError?.kind === "unauthorized"; return <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-6"><div className="flex gap-3"><AlertTriangle aria-hidden="true" className="mt-0.5 text-[var(--aries-danger)]" size={18} /><div><p className="font-medium text-[var(--aries-danger)]">{denied ? "You cannot access these transactions" : "Transactions could not be loaded"}</p><p className="mt-1 text-sm text-muted">{denied ? "Check your account access or sign in again. No transaction state was changed." : "No transaction state was changed. Retry when the service is available."}</p><Button variant="secondary" className="mt-4" onClick={onRetry}>Try again</Button></div></div></div>; }
 function ReversalDialog({ transaction, result, isPending, error, returnFocusRef, onClose, onConfirm }: { transaction: Transaction; result?: Transaction; isPending: boolean; error: Error | null; returnFocusRef: RefObject<HTMLButtonElement | null>; onClose: () => void; onConfirm: () => void }) {

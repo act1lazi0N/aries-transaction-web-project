@@ -16,10 +16,20 @@ export function transactionHistoryPath({ accountId, page = 0, size = 20, sort = 
   return `/api/v1/transfers/account/${encodeURIComponent(accountId)}?${params.toString()}`;
 }
 
+export function transactionDetailPath(transactionId: string): string {
+  return `/api/v1/transfers/${encodeURIComponent(transactionId)}`;
+}
+
 export function getTransactionHistory(params: TransactionHistoryParams, request?: AuthRequest): Promise<PageResponse<Transaction>> {
   const path = transactionHistoryPath(params);
   const response = request ? request<unknown>(path) : apiRequest<unknown>(path, { accessToken: params.accessToken });
   return response.then(parseTransactionPage);
+}
+
+export function getTransaction(transactionId: string, request?: AuthRequest): Promise<Transaction> {
+  const path = transactionDetailPath(transactionId);
+  const response = request ? request<unknown>(path) : apiRequest<unknown>(path);
+  return response.then(value => parseTransaction(value));
 }
 
 export function parseTransactionPage(value: unknown): PageResponse<Transaction> {
@@ -36,8 +46,8 @@ export function parseTransactionPage(value: unknown): PageResponse<Transaction> 
   };
 }
 
-function parseTransaction(value: unknown, index: number): Transaction {
-  if (!isRecord(value)) throw invalidContract(`transaction at index ${index}`);
+export function parseTransaction(value: unknown, index?: number): Transaction {
+  if (!isRecord(value)) throw invalidContract(index === undefined ? "transaction" : `transaction at index ${index}`);
   return {
     id: requiredString(value.id, "transaction id"),
     fromAccountId: requiredString(value.fromAccountId, "source account"),
