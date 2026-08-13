@@ -19,6 +19,10 @@ export type LoginCredentials = {
   password: string;
 };
 
+export type RegistrationDetails = LoginCredentials & {
+  fullName: string;
+};
+
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error";
 
 export function parseAuthResponse(value: unknown): AuthResponse {

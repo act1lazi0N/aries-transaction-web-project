@@ -1,8 +1,17 @@
 import { apiRequest } from "@/lib/api/client";
-import { parseAuthResponse, type AuthUser, type LoginCredentials } from "@/features/auth/types";
+import { parseAuthResponse, type AuthUser, type LoginCredentials, type RegistrationDetails } from "@/features/auth/types";
+
+export const authPaths = {
+  register: "/api/v1/auth/register",
+  login: "/api/v1/auth/login",
+} as const;
+
+export function register(details: RegistrationDetails) {
+  return apiRequest<unknown>(authPaths.register, { method: "POST", body: JSON.stringify(details) }).then(parseAuthResponse);
+}
 
 export function login(credentials: LoginCredentials) {
-  return apiRequest<unknown>("/api/v1/auth/login", { method: "POST", body: JSON.stringify(credentials) }).then(parseAuthResponse);
+  return apiRequest<unknown>(authPaths.login, { method: "POST", body: JSON.stringify(credentials) }).then(parseAuthResponse);
 }
 
 export function refreshSession() {

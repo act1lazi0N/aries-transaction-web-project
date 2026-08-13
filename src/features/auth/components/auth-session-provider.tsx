@@ -3,8 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type ApiErrorKind } from "@/lib/api/errors";
 import { apiRequest } from "@/lib/api/client";
-import { getCurrentUser, login, logout, refreshSession } from "@/features/auth/api";
-import type { AuthResponse, AuthStatus, AuthUser, LoginCredentials } from "@/features/auth/types";
+import { getCurrentUser, login, logout, refreshSession, register } from "@/features/auth/api";
+import type { AuthResponse, AuthStatus, AuthUser, LoginCredentials, RegistrationDetails } from "@/features/auth/types";
 import { mayRefreshAfterUnauthorized } from "@/features/auth/policy";
 
 type AuthRequestOptions = RequestInit & { financialMutation?: boolean };
@@ -13,6 +13,7 @@ type AuthSessionValue = {
   user: AuthUser | null;
   error: ApiError | null;
   signIn: (credentials: LoginCredentials) => Promise<void>;
+  signUp: (details: RegistrationDetails) => Promise<void>;
   signOut: () => Promise<void>;
   request: <T>(path: string, options?: AuthRequestOptions) => Promise<T>;
 };
@@ -59,6 +60,12 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
     catch (cause) { const normalized = authError(cause); setAccessToken(null); setUser(null); setStatus("error"); setError(normalized); throw normalized; }
   }, [establishSession]);
 
+  const signUp = useCallback(async (details: RegistrationDetails) => {
+    setStatus("loading"); setError(null);
+    try { await establishSession(await register(details)); }
+    catch (cause) { const normalized = authError(cause); setAccessToken(null); setUser(null); setStatus("error"); setError(normalized); throw normalized; }
+  }, [establishSession]);
+
   const signOut = useCallback(async () => {
     const currentToken = accessToken;
     setAccessToken(null); setUser(null); setStatus("unauthenticated"); setError(null);
@@ -79,7 +86,7 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
     }
   }, [accessToken, refresh]);
 
-  const value = useMemo<AuthSessionValue>(() => ({ status, user, error, signIn, signOut, request }), [status, user, error, signIn, signOut, request]);
+  const value = useMemo<AuthSessionValue>(() => ({ status, user, error, signIn, signUp, signOut, request }), [status, user, error, signIn, signUp, signOut, request]);
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;
 }
 
