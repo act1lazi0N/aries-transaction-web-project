@@ -26,3 +26,22 @@ export function useReverseTransaction() {
     },
   });
 }
+
+export function useRefundTransaction() {
+  const queryClient = useQueryClient();
+  const session = useAuthSession();
+  return useMutation({
+    mutationFn: ({ transactionId, idempotencyKey, amount, description }: { transactionId: string; idempotencyKey: string; amount: string; description?: string }) => session.request<MutationResponse>(`/api/v1/transfers/${encodeURIComponent(transactionId)}/refund`, {
+      method: "POST",
+      body: JSON.stringify({ idempotencyKey, amount, description }),
+      financialMutation: true,
+    }),
+    retry: false,
+    onSuccess: async (_data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
+        queryClient.invalidateQueries({ queryKey: transactionKeys.detail(variables.transactionId) }),
+      ]);
+    },
+  });
+}
