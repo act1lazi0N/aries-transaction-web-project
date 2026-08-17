@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 import { userFacingErrorMessage } from "@/lib/api/errors";
-import { authenticatedLandingRoute } from "@/features/auth/routes";
+import { authRouteWithReturnTo } from "@/features/auth/routes";
 
-export function RegisterForm() {
+export function RegisterForm({ returnTo }: Readonly<{ returnTo: string }>) {
   const router = useRouter();
   const session = useAuthSession();
   const [fullName, setFullName] = useState("");
@@ -17,7 +18,7 @@ export function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => { if (session.status === "authenticated") router.replace(authenticatedLandingRoute); }, [router, session.status]);
+  useEffect(() => { if (session.status === "authenticated") router.replace(returnTo as Route); }, [returnTo, router, session.status]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,6 +53,6 @@ export function RegisterForm() {
     <div><label htmlFor="confirm-password" className="mb-2 block text-sm font-medium">Confirm password</label><input id="confirm-password" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} className={inputClassName} /></div>
     {formError && <p id="register-error" role="alert" className="text-sm text-[var(--aries-danger)]">{formError}</p>}
     <Button type="submit" className="w-full" disabled={session.status === "loading"}>{session.status === "loading" ? "Creating account…" : "Create account"}</Button>
-    <p className="text-center text-sm text-muted">Already registered? <Link href="/login" className="font-semibold text-accent hover:underline">Sign in</Link></p>
+    <p className="text-center text-sm text-muted">Already registered? <Link href={authRouteWithReturnTo("/login", returnTo) as Route} className="font-semibold text-accent hover:underline">Sign in</Link></p>
   </form>;
 }
