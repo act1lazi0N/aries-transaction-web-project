@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 import { userFacingErrorMessage } from "@/lib/api/errors";
+import { authenticatedLandingRoute } from "@/features/auth/routes";
 
 export function LoginForm() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => { if (session.status === "authenticated") router.replace("/"); }, [router, session.status]);
+  useEffect(() => { if (session.status === "authenticated") router.replace(authenticatedLandingRoute); }, [router, session.status]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setFormError(null);
