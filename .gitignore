@@ -10,4 +10,6 @@ coverage
 # AI agent
 .agents/
 AGENTS.md
-
+.idea
+agents
+.codex/

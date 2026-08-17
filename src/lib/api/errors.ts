@@ -22,6 +22,20 @@ export class ApiError extends Error {
   }
 }
 
+export function userFacingErrorMessage(error: unknown, fallback = "The request could not be completed. Try again.") {
+  if (!(error instanceof ApiError)) return fallback;
+  switch (error.kind) {
+    case "unauthorized": return "Your sign-in session is not authorized. Sign in again.";
+    case "forbidden": return "You are not authorized to perform this action.";
+    case "validation": return "Check the entered information and try again.";
+    case "conflict": return "This request conflicts with the current backend state.";
+    case "rate_limited": return "Too many requests. Wait a moment and try again.";
+    case "server": return "The service is unavailable. No financial state was changed.";
+    case "network": return "The service could not be reached. Check your connection and try again.";
+    case "unknown": return fallback;
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
