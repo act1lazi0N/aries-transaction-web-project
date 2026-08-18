@@ -1,4 +1,3 @@
-import { Bell } from "lucide-react";
 import { SessionControls } from "@/features/auth/components/session-controls";
 import { NavigationLinks } from "@/components/navigation-links";
 
@@ -8,6 +7,6 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       <div className="mb-8 flex items-center gap-3"><div className="grid size-9 place-items-center rounded-xl bg-accent text-sm font-bold text-accent-foreground">A</div><div><p className="font-semibold tracking-tight">ATC project</p><p className="text-xs text-muted">Financial workspace</p></div></div>
       <NavigationLinks />
     </aside>
-    <div className="min-w-0"><header className="flex h-16 items-center justify-between border-b border-border bg-surface px-6 lg:px-10"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">Workspace</p><p className="text-sm font-medium">Financial operations</p></div><div className="flex items-center gap-2"><button type="button" aria-label="View notifications" className="rounded-lg p-2 text-muted hover:bg-surface-muted hover:text-foreground"><Bell aria-hidden="true" size={19} /></button><SessionControls /></div></header><main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">{children}</main></div>
+    <div className="min-w-0"><header className="flex h-16 items-center justify-between border-b border-border bg-surface px-6 lg:px-10"><div><p className="text-xs font-medium uppercase tracking-[0.16em] text-muted">Workspace</p><p className="text-sm font-medium">Financial operations</p></div><div className="flex items-center gap-4"><span className="hidden text-xs text-muted md:inline" title="Notifications are not connected to the service yet">Notifications unavailable</span><SessionControls /></div></header><main className="mx-auto max-w-[1440px] px-6 py-8 lg:px-10">{children}</main></div>
   </div>;
 }

@@ -1,5 +1,6 @@
 import { apiRequest } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { exactDecimalString } from "@/lib/api/decimal";
 import type { AuthRequest } from "@/features/auth/request-types";
 import type { Account } from "@/features/accounts/types";
 
@@ -35,8 +36,8 @@ function requiredString(value: unknown, field: string): string {
 }
 
 function requiredMoney(value: unknown, field: string): string {
-  if (typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value)) return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  const decimal = exactDecimalString(value);
+  if (decimal !== null) return decimal;
   throw invalidContract(field);
 }
 

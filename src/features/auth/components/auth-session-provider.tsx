@@ -3,9 +3,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, type ApiErrorKind } from "@/lib/api/errors";
 import { apiRequest } from "@/lib/api/client";
-import { getCurrentUser, login, logout, refreshSession, register } from "@/features/auth/api";
+import { login, logout, refreshSession, register } from "@/features/auth/api";
 import type { AuthResponse, AuthStatus, AuthUser, LoginCredentials, RegistrationDetails } from "@/features/auth/types";
 import { mayRefreshAfterUnauthorized } from "@/features/auth/policy";
+import { advanceAuthEpoch, canReuseRefreshPromise, isCurrentAuthEpoch } from "@/features/auth/session-epoch";
 
 type AuthRequestOptions = RequestInit & { financialMutation?: boolean };
 type AuthSessionValue = {
@@ -30,43 +31,57 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
-  const refreshInFlight = useRef<Promise<string> | null>(null);
+  const authEpoch = useRef(0);
+  const refreshInFlight = useRef<{ epoch: number; promise: Promise<string> } | null>(null);
 
-  const establishSession = useCallback(async (response: AuthResponse) => {
+  const establishSession = useCallback(async (response: AuthResponse, expectedEpoch: number) => {
+    if (!isCurrentAuthEpoch(authEpoch, expectedEpoch)) throw new ApiError("The authentication session changed", { kind: "unauthorized" });
     setAccessToken(response.accessToken);
-    const currentUser = await getCurrentUser(response.accessToken);
-    setUser(currentUser);
+    setUser(response.user);
     setStatus("authenticated");
     setError(null);
     return response.accessToken;
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!refreshInFlight.current) {
-      refreshInFlight.current = refreshSession().then(establishSession).finally(() => { refreshInFlight.current = null; });
-    }
-    return refreshInFlight.current;
+    const epoch = authEpoch.current;
+    const current = refreshInFlight.current;
+    if (current && canReuseRefreshPromise(current.epoch, epoch)) return current.promise;
+    let promise: Promise<string>;
+    promise = refreshSession().then(response => establishSession(response, epoch)).finally(() => {
+      if (refreshInFlight.current?.promise === promise) refreshInFlight.current = null;
+    });
+    refreshInFlight.current = { epoch, promise };
+    return promise;
   }, [establishSession]);
 
   useEffect(() => {
+    const epoch = authEpoch.current;
     void refresh().catch((cause: unknown) => {
+      if (!isCurrentAuthEpoch(authEpoch, epoch)) return;
       setAccessToken(null); setUser(null); setStatus("unauthenticated"); setError(authError(cause));
     });
   }, [refresh]);
 
   const signIn = useCallback(async (credentials: LoginCredentials) => {
+    const epoch = advanceAuthEpoch(authEpoch);
+    refreshInFlight.current = null;
     setStatus("loading"); setError(null);
-    try { await establishSession(await login(credentials)); }
-    catch (cause) { const normalized = authError(cause); setAccessToken(null); setUser(null); setStatus("error"); setError(normalized); throw normalized; }
+    try { await establishSession(await login(credentials), epoch); }
+    catch (cause) { const normalized = authError(cause); if (!isCurrentAuthEpoch(authEpoch, epoch)) return; setAccessToken(null); setUser(null); setStatus("error"); setError(normalized); throw normalized; }
   }, [establishSession]);
 
   const signUp = useCallback(async (details: RegistrationDetails) => {
+    const epoch = advanceAuthEpoch(authEpoch);
+    refreshInFlight.current = null;
     setStatus("loading"); setError(null);
-    try { await establishSession(await register(details)); }
-    catch (cause) { const normalized = authError(cause); setAccessToken(null); setUser(null); setStatus("error"); setError(normalized); throw normalized; }
+    try { await establishSession(await register(details), epoch); }
+    catch (cause) { const normalized = authError(cause); if (!isCurrentAuthEpoch(authEpoch, epoch)) return; setAccessToken(null); setUser(null); setStatus("error"); setError(normalized); throw normalized; }
   }, [establishSession]);
 
   const signOut = useCallback(async () => {
+    advanceAuthEpoch(authEpoch);
+    refreshInFlight.current = null;
     const currentToken = accessToken;
     setAccessToken(null); setUser(null); setStatus("unauthenticated"); setError(null);
     if (currentToken) await logout(currentToken);

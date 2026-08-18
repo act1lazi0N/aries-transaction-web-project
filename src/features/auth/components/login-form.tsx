@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
-import { userFacingErrorMessage } from "@/lib/api/errors";
+import { ApiError, userFacingErrorMessage } from "@/lib/api/errors";
 import { authRouteWithReturnTo } from "@/features/auth/routes";
 
 export function LoginForm({ returnTo }: Readonly<{ returnTo: string }>) {
@@ -24,7 +24,7 @@ export function LoginForm({ returnTo }: Readonly<{ returnTo: string }>) {
     if (!email.trim() || !password) { setFormError("Enter your email address and password."); return; }
     setIsSubmitting(true);
     try { await session.signIn({ email: email.trim(), password }); }
-    catch (error) { setFormError(userFacingErrorMessage(error, "We could not sign you in. Check your details and try again.")); }
+    catch (error) { setFormError(error instanceof ApiError && error.kind === "unauthorized" ? "The email or password is incorrect. Check your details and try again." : userFacingErrorMessage(error, "We could not sign you in. Check your details and try again.")); }
     finally { setIsSubmitting(false); }
   }
 
