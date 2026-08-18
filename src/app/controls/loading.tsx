@@ -1,0 +1,3 @@
+export default function Loading() {
+  return <div role="status" aria-label="Loading operational controls" className="space-y-4"><div className="h-8 w-56 animate-pulse rounded bg-surface-muted" /><div className="h-64 animate-pulse rounded-2xl border border-border bg-surface" /></div>;
+}

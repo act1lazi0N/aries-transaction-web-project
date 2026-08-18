@@ -1,0 +1,29 @@
+"use client";
+
+import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useAuthSession } from "@/features/auth/components/auth-session-provider";
+import { getSettlementBatch } from "@/features/settlements/api";
+import type { AuthRequest } from "@/features/auth/request-types";
+
+export const settlementKeys = {
+  all: ["settlements"] as const,
+  detail: (batchId: string) => [...settlementKeys.all, "detail", batchId] as const,
+};
+
+export function settlementBatchOptions(batchId: string, request?: AuthRequest) {
+  return queryOptions({
+    queryKey: settlementKeys.detail(batchId),
+    queryFn: () => getSettlementBatch(batchId, request),
+    enabled: Boolean(batchId),
+    retry: false,
+    staleTime: 30_000,
+  });
+}
+
+export function useSettlementBatch(batchId?: string) {
+  const session = useAuthSession();
+  return useQuery({
+    ...settlementBatchOptions(batchId ?? "", session.request),
+    enabled: session.status === "authenticated" && Boolean(batchId),
+  });
+}

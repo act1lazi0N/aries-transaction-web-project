@@ -13,6 +13,12 @@
   --aries-warning: #9a6700;
   --aries-danger: #b42318;
   --aries-pending: #6b4eff;
+  --atc-gradient-sky: #67bcdb;
+  --atc-gradient-cyan: #35b6e6;
+  --atc-gradient-blue: #068cbd;
+  --atc-gradient-mist: #69b4cf;
+  --atc-gradient-deep: #598a9c;
+  --aries-deep: var(--atc-gradient-deep);
 }
 
 @theme inline {
@@ -36,5 +42,23 @@ body {
 }
 
 button, a { -webkit-tap-highlight-color: transparent; }
+.atc-gradient-zone {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background-color: var(--atc-gradient-mist);
+  background-image:
+    radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--atc-gradient-cyan) 76%, transparent) 0, transparent 34%),
+    radial-gradient(circle at 18% 88%, color-mix(in srgb, var(--atc-gradient-blue) 54%, transparent) 0, transparent 38%),
+    linear-gradient(118deg, var(--atc-gradient-sky) 0%, var(--atc-gradient-cyan) 28%, var(--atc-gradient-blue) 63%, var(--atc-gradient-deep) 100%);
+}
+.atc-gradient-zone::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(135deg, color-mix(in srgb, white 42%, transparent), transparent 42% 72%, color-mix(in srgb, var(--atc-gradient-deep) 20%, transparent));
+  content: "";
+  pointer-events: none;
+}
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--aries-accent) 70%, white); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; } }

@@ -7,7 +7,9 @@ out
 *.tsbuildinfo
 coverage
 
-# AI agent
-.agents/
+# Private AI configuration and logs — never commit or expose
+/.agents/
+/agents/
+/.codex/
 AGENTS.md
-
+.idea
