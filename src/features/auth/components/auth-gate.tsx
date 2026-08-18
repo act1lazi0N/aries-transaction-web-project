@@ -16,7 +16,7 @@ export function AuthGate({ children }: Readonly<{ children: React.ReactNode }>) 
     const currentRoute = `${window.location.pathname}${window.location.search}${window.location.hash}`;
     router.replace(loginRouteFor(currentRoute) as Route);
   }, [router, session.status]);
-  if (session.status === "loading") return <div role="status" aria-label="Checking session" className="rounded-2xl border border-border bg-surface p-8 text-sm text-muted">Checking your session…</div>;
-  if (session.status !== "authenticated") return <div className="rounded-2xl border border-border bg-surface p-8"><p className="font-medium">Sign in required</p><p className="mt-2 text-sm text-muted">Redirecting to sign in. After authentication, you will return to this page.</p><Link href={"/login" as Route}><Button variant="secondary" className="mt-4">Open sign in</Button></Link></div>;
+  if (session.status === "loading") return <div role="status" aria-label="Checking your session" className="rounded-2xl border border-border bg-surface p-8 text-sm text-muted">Checking your session…</div>;
+  if (session.status !== "authenticated") return <div className="rounded-2xl border border-border bg-surface p-8"><p className="font-medium">Please sign in to continue</p><p className="mt-2 text-sm text-muted">We’ll take you to sign in, then bring you back to this page.</p><Link href={"/login" as Route}><Button variant="secondary" className="mt-4">Go to sign in</Button></Link></div>;
   return children;
 }

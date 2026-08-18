@@ -26,7 +26,7 @@ export function RegisterForm({ returnTo }: Readonly<{ returnTo: string }>) {
     const normalizedName = fullName.trim();
     const normalizedEmail = email.trim();
     if (!normalizedName || !normalizedEmail || !password || !confirmPassword) {
-      setFormError("Complete all required fields.");
+      setFormError("Complete all required fields to continue.");
       return;
     }
     if (password.length < 8 || password.length > 72) {
@@ -40,7 +40,7 @@ export function RegisterForm({ returnTo }: Readonly<{ returnTo: string }>) {
     try {
       await session.signUp({ fullName: normalizedName, email: normalizedEmail, password });
     } catch (error) {
-      setFormError(userFacingErrorMessage(error, "Registration failed. Try again."));
+      setFormError(userFacingErrorMessage(error, "We could not create your account. Try again."));
     }
   }
 
@@ -53,6 +53,6 @@ export function RegisterForm({ returnTo }: Readonly<{ returnTo: string }>) {
     <div><label htmlFor="confirm-password" className="mb-2 block text-sm font-medium">Confirm password</label><input id="confirm-password" name="confirmPassword" type="password" autoComplete="new-password" minLength={8} maxLength={72} value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} className={inputClassName} /></div>
     {formError && <p id="register-error" role="alert" className="text-sm text-[var(--aries-danger)]">{formError}</p>}
     <Button type="submit" className="w-full" disabled={session.status === "loading"}>{session.status === "loading" ? "Creating account…" : "Create account"}</Button>
-    <p className="text-center text-sm text-muted">Already registered? <Link href={authRouteWithReturnTo("/login", returnTo) as Route} className="font-semibold text-accent hover:underline">Sign in</Link></p>
+    <p className="text-center text-sm text-muted">Already have an account? <Link href={authRouteWithReturnTo("/login", returnTo) as Route} className="font-semibold text-accent hover:underline">Sign in</Link></p>
   </form>;
 }

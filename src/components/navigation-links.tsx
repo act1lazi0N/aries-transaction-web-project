@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeftRight, LayoutDashboard, Send, Settings, ShieldCheck } from "lucide-react";
+import { ArrowLeftRight, Landmark, LayoutDashboard, Send, Settings, ShieldCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const navigation = [
@@ -10,6 +10,7 @@ const navigation = [
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
   { href: "/transfers", label: "New transfer", icon: Send },
   { href: "/controls", label: "Controls", icon: ShieldCheck },
+  { href: "/settlements", label: "Settlements", icon: Landmark },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
