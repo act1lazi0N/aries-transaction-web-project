@@ -1,5 +1,6 @@
 import { apiRequest, type ApiResponse } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
+import { exactDecimalString } from "@/lib/api/decimal";
 import type { AuthRequest } from "@/features/auth/request-types";
 import type { ReconciliationException, ReconciliationRequest, ReconciliationRun } from "@/features/controls/types";
 
@@ -70,8 +71,8 @@ function requiredCount(value: unknown, field: string): number {
 }
 
 function requiredMoney(value: unknown, field: string): string {
-  if (typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value)) return value;
-  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  const decimal = exactDecimalString(value);
+  if (decimal !== null) return decimal;
   throw invalidContract(field);
 }
 

@@ -22,16 +22,35 @@ export class ApiError extends Error {
   }
 }
 
-export function userFacingErrorMessage(error: unknown, fallback = "The request could not be completed. Try again.") {
+export function userFacingErrorMessage(error: unknown, fallback = "We could not complete that request. Try again.") {
   if (!(error instanceof ApiError)) return fallback;
   switch (error.kind) {
-    case "unauthorized": return "Your sign-in session is not authorized. Sign in again.";
-    case "forbidden": return "You are not authorized to perform this action.";
+    case "unauthorized": return "Your sign-in session has expired. Sign in again.";
+    case "forbidden": return "You do not have permission to do that.";
     case "validation": return "Check the entered information and try again.";
-    case "conflict": return "This request conflicts with the current backend state.";
-    case "rate_limited": return "Too many requests. Wait a moment and try again.";
-    case "server": return "The service is unavailable. No financial state was changed.";
-    case "network": return "The service could not be reached. Check your connection and try again.";
+    case "conflict": return "This request conflicts with the current transaction state.";
+    case "rate_limited": return "There are too many requests right now. Wait a moment and try again.";
+    case "server": return "The service is unavailable. Try again when it is responding.";
+    case "network": return "We could not reach the service. Check your connection and try again.";
+    case "unknown": return fallback;
+  }
+}
+
+/**
+ * Copy for a financial mutation after the transport cannot establish an
+ * authoritative outcome. A timeout or 5xx does not prove that the backend did
+ * not accept the request, so callers must direct the user to status recovery.
+ */
+export function financialMutationErrorMessage(error: unknown, fallback = "We could not confirm the operation status. Check its status before trying again.") {
+  if (!(error instanceof ApiError)) return fallback;
+  switch (error.kind) {
+    case "unauthorized": return "Your sign-in session has expired. Sign in again. The operation status is not confirmed.";
+    case "forbidden": return "You do not have permission to do that.";
+    case "validation": return "Check the entered information and try again. The request was rejected before processing.";
+    case "conflict": return "The request conflicts with the current state. Check the operation status before trying again.";
+    case "rate_limited": return "There are too many requests right now. Check the operation status before trying again.";
+    case "server": return "The service did not confirm the operation. Check its status before trying again.";
+    case "network": return "We could not confirm the operation because the service could not be reached. Check its status before trying again.";
     case "unknown": return fallback;
   }
 }
