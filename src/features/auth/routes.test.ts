@@ -10,6 +10,11 @@ describe("authenticated routes", () => {
     expect(resolveAuthenticatedRoute("/transactions?page=2#latest")).toBe("/transactions?page=2#latest");
   });
 
+  it("preserves the settlement workspace and its selected batch", () => {
+    expect(resolveAuthenticatedRoute("/settlements?batchId=batch-1#detail")).toBe("/settlements?batchId=batch-1#detail");
+    expect(loginRouteFor("/settlements?batchId=batch-1")).toBe("/login?returnTo=%2Fsettlements%3FbatchId%3Dbatch-1");
+  });
+
   it.each([undefined, "", "/", "/login", "/register?returnTo=/controls", "/api/v1/auth/me", "/unknown", "https://example.com", "//example.com", "javascript:alert(1)"])(
     "falls back to overview for unsafe or public destination %s",
     (destination) => {

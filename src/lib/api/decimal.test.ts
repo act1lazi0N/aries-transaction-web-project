@@ -11,4 +11,10 @@ describe("exactDecimalString", () => {
     expect(exactDecimalString(Number.POSITIVE_INFINITY)).toBeNull();
     expect(exactDecimalString("1.2.3")).toBeNull();
   });
+
+  it("normalizes numeric exponent notation for the temporary compatibility path", () => {
+    expect(exactDecimalString(1e-7)).toBe("0.0000001");
+    expect(exactDecimalString(1.25e3)).toBe("1250");
+    expect(exactDecimalString(-2.5e-4)).toBe("-0.00025");
+  });
 });

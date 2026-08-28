@@ -4,7 +4,7 @@ type ReturnToValue = string | string[] | undefined;
 
 const applicationOrigin = "https://aries.local";
 const publicRoutePrefixes = ["/login", "/register"] as const;
-const protectedRoutePrefixes = ["/overview", "/transactions", "/transfers", "/controls", "/settings"] as const;
+const protectedRoutePrefixes = ["/overview", "/transactions", "/transfers", "/controls", "/settlements", "/settings"] as const;
 
 function firstValue(value: ReturnToValue) {
   return Array.isArray(value) ? value[0] : value;
