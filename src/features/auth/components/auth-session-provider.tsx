@@ -34,6 +34,17 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
   const authEpoch = useRef(0);
   const refreshInFlight = useRef<{ epoch: number; promise: Promise<string> } | null>(null);
 
+  const invalidateSession = useCallback((cause: unknown) => {
+    const normalized = authError(cause);
+    advanceAuthEpoch(authEpoch);
+    refreshInFlight.current = null;
+    setAccessToken(null);
+    setUser(null);
+    setStatus("unauthenticated");
+    setError(normalized);
+    return normalized;
+  }, []);
+
   const establishSession = useCallback(async (response: AuthResponse, expectedEpoch: number) => {
     if (!isCurrentAuthEpoch(authEpoch, expectedEpoch)) throw new ApiError("The authentication session changed", { kind: "unauthorized" });
     setAccessToken(response.accessToken);
@@ -59,9 +70,9 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
     const epoch = authEpoch.current;
     void refresh().catch((cause: unknown) => {
       if (!isCurrentAuthEpoch(authEpoch, epoch)) return;
-      setAccessToken(null); setUser(null); setStatus("unauthenticated"); setError(authError(cause));
+      invalidateSession(cause);
     });
-  }, [refresh]);
+  }, [invalidateSession, refresh]);
 
   const signIn = useCallback(async (credentials: LoginCredentials) => {
     const epoch = advanceAuthEpoch(authEpoch);
@@ -95,11 +106,25 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
     } catch (cause) {
       const normalized = authError(cause);
       const safeRead = mayRefreshAfterUnauthorized(method, financialMutation) && normalized.kind === "unauthorized";
-      if (!safeRead) throw normalized;
-      const renewedToken = await refresh();
-      return apiRequest<T>(path, { ...requestOptions, accessToken: renewedToken });
+      if (!safeRead) {
+        if (normalized.kind === "unauthorized") invalidateSession(normalized);
+        throw normalized;
+      }
+      let renewedToken: string;
+      try {
+        renewedToken = await refresh();
+      } catch (refreshCause) {
+        throw invalidateSession(refreshCause);
+      }
+      try {
+        return await apiRequest<T>(path, { ...requestOptions, accessToken: renewedToken });
+      } catch (retryCause) {
+        const retryError = authError(retryCause);
+        if (retryError.kind === "unauthorized") invalidateSession(retryError);
+        throw retryError;
+      }
     }
-  }, [accessToken, refresh]);
+  }, [accessToken, invalidateSession, refresh]);
 
   const value = useMemo<AuthSessionValue>(() => ({ status, user, error, signIn, signUp, signOut, request }), [status, user, error, signIn, signUp, signOut, request]);
   return <AuthSessionContext.Provider value={value}>{children}</AuthSessionContext.Provider>;

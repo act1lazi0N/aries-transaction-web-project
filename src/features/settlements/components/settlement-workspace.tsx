@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/features/accounts/format";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
+import { hasCapability } from "@/features/auth/capabilities";
 import { useSettlementBatch } from "@/features/settlements/queries";
 import { toSettlementLifecycle, type SettlementBatch, type SettlementItem } from "@/features/settlements/types";
 import { ApiError } from "@/lib/api/errors";
@@ -17,7 +18,7 @@ export function SettlementWorkspace({ initialBatchId }: { initialBatchId?: strin
   const router = useRouter();
   const [batchId, setBatchId] = useState(initialBatchId ?? "");
   const query = useSettlementBatch(initialBatchId);
-  const canOperate = ["OPERATOR", "ADMIN"].includes(session.user?.role.toUpperCase() ?? "");
+  const canOperate = hasCapability(session.user?.role, "settlements:operate");
 
   function openBatch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

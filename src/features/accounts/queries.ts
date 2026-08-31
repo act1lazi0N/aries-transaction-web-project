@@ -6,22 +6,23 @@ import { getAccounts } from "@/features/accounts/api";
 
 export const accountKeys = {
   all: ["accounts"] as const,
-  mine: () => [...accountKeys.all, "mine"] as const,
+  mine: (userId: string) => [...accountKeys.all, "mine", userId] as const,
 };
 
-export function accountOptions(request?: ReturnType<typeof useAuthSession>["request"]) {
+export function accountOptions(userId: string, request?: ReturnType<typeof useAuthSession>["request"]) {
   return queryOptions({
-    queryKey: accountKeys.mine(),
+    queryKey: accountKeys.mine(userId),
     queryFn: () => getAccounts(request),
     retry: false,
     staleTime: 30_000,
   });
 }
 
-export function useAccounts() {
+export function useAccounts(enabled = true) {
   const session = useAuthSession();
+  const userId = session.user?.id ?? "anonymous";
   return useQuery({
-    ...accountOptions(session.request),
-    enabled: session.status === "authenticated",
+    ...accountOptions(userId, session.request),
+    enabled: enabled && session.status === "authenticated" && Boolean(session.user?.id),
   });
 }

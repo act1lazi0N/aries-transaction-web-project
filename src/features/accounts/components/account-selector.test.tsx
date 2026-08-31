@@ -14,6 +14,7 @@ const accounts: Account[] = [
     currency: "USD",
     status: "ACTIVE",
     createdAt: "2026-08-19T08:00:00Z",
+    description: null,
   },
   {
     id: "account-secondary",
@@ -24,6 +25,7 @@ const accounts: Account[] = [
     currency: "USD",
     status: "ACTIVE",
     createdAt: "2026-08-19T08:00:00Z",
+    description: null,
   },
   {
     id: "account-frozen",
@@ -34,6 +36,7 @@ const accounts: Account[] = [
     currency: "USD",
     status: "FROZEN",
     createdAt: "2026-08-19T08:00:00Z",
+    description: null,
   },
 ];
 

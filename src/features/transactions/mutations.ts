@@ -20,7 +20,7 @@ export function useReverseTransaction() {
     onSuccess: async (_data, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
-        queryClient.invalidateQueries({ queryKey: transactionKeys.detail(variables.transactionId) }),
+        queryClient.invalidateQueries({ queryKey: transactionKeys.detail(session.user?.id ?? "anonymous", variables.transactionId) }),
       ]);
     },
   });
@@ -39,7 +39,7 @@ export function useRefundTransaction() {
     onSuccess: async (_data, variables) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: transactionKeys.all }),
-        queryClient.invalidateQueries({ queryKey: transactionKeys.detail(variables.transactionId) }),
+        queryClient.invalidateQueries({ queryKey: transactionKeys.detail(session.user?.id ?? "anonymous", variables.transactionId) }),
       ]);
     },
   });

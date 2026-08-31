@@ -7,7 +7,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 import { userFacingErrorMessage } from "@/lib/api/errors";
-import { authRouteWithReturnTo } from "@/features/auth/routes";
+import { authRouteWithReturnTo, resolveAuthorizedRouteForRole } from "@/features/auth/routes";
 
 export function RegisterForm({ returnTo }: Readonly<{ returnTo: string }>) {
   const router = useRouter();
@@ -18,7 +18,9 @@ export function RegisterForm({ returnTo }: Readonly<{ returnTo: string }>) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
-  useEffect(() => { if (session.status === "authenticated") router.replace(returnTo as Route); }, [returnTo, router, session.status]);
+  useEffect(() => {
+    if (session.status === "authenticated") router.replace(resolveAuthorizedRouteForRole(returnTo, session.user?.role) as Route);
+  }, [returnTo, router, session.status, session.user?.role]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

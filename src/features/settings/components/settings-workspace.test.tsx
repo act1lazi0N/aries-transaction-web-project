@@ -16,14 +16,15 @@ vi.mock("@/features/auth/components/auth-session-provider", () => ({
 }));
 
 describe("SettingsWorkspace", () => {
-  it("renders backend-confirmed profile fields as read-only", () => {
+  it("renders profile fields with clear read-only copy", () => {
     render(<SettingsWorkspace />);
 
     expect(screen.getByRole("heading", { name: "Profile and access" })).toBeInTheDocument();
+    expect(screen.getByText(/information is read-only and cannot be changed here/i)).toBeInTheDocument();
     expect(screen.getByText("Aries Operator")).toBeInTheDocument();
     expect(screen.getByText("operator@example.com")).toBeInTheDocument();
-    expect(screen.getByText("OPERATOR")).toBeInTheDocument();
-    expect(screen.getByText(/Notification preferences and session management will appear after their service contracts are available/i)).toBeInTheDocument();
+    expect(screen.getByText("Operator")).toBeInTheDocument();
+    expect(screen.getByText(/Notification preferences and session controls are not available yet/i)).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 });
