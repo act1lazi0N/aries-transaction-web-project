@@ -38,7 +38,7 @@ describe("authenticated routes", () => {
   it("preserves only destinations available to the authenticated role", () => {
     expect(resolveAuthorizedRouteForRole("/transfers?mode=EXTERNAL#draft", "USER")).toBe("/transfers?mode=EXTERNAL#draft");
     expect(resolveAuthorizedRouteForRole("/controls?runId=run-1", "USER")).toBe("/overview");
-    expect(resolveAuthorizedRouteForRole("/overview?accountId=account-1", "OPERATOR")).toBe("/controls");
+    expect(resolveAuthorizedRouteForRole("/overview?accountId=account-1", "OPERATOR")).toBe("/operations");
     expect(resolveAuthorizedRouteForRole("/transactions?page=2#latest", "OPERATOR")).toBe("/transactions?page=2#latest");
   });
 

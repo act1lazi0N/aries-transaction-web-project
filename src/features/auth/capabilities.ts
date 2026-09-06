@@ -1,5 +1,8 @@
 export type WorkspaceCapability =
   | "overview:view"
+  | "operations:view"
+  | "customers:manage"
+  | "ledger:view"
   | "transactions:view"
   | "transfers:create"
   | "controls:operate"
@@ -18,6 +21,9 @@ type WorkspaceRouteDefinition = {
 
 export const workspaceRoutes = {
   overview: { href: "/overview", capability: "overview:view" },
+  operations: { href: "/operations", capability: "operations:view" },
+  customers: { href: "/customers", capability: "customers:manage" },
+  ledger: { href: "/ledger", capability: "ledger:view" },
   transactions: { href: "/transactions", capability: "transactions:view" },
   transfers: { href: "/transfers", capability: "transfers:create" },
   controls: { href: "/controls", capability: "controls:operate" },
@@ -29,8 +35,8 @@ export const workspaceRoutes = {
 const roleCapabilities = {
   USER: ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"],
   MERCHANT: ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create", "transactions:refund"],
-  OPERATOR: ["transactions:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse", "transactions:refund"],
-  ADMIN: ["transactions:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse"],
+  OPERATOR: ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse", "transactions:refund"],
+  ADMIN: ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse"],
 } as const satisfies Record<KnownRole, readonly WorkspaceCapability[]>;
 
 const routeDefinitions = Object.values(workspaceRoutes);
@@ -54,7 +60,7 @@ export function requiresFirstFinancialAccount(role: string | null | undefined): 
 export function defaultRouteForRole(role: string | null | undefined): string {
   const normalized = normalizeRole(role);
   if (normalized === "USER" || normalized === "MERCHANT") return workspaceRoutes.overview.href;
-  if (normalized === "OPERATOR" || normalized === "ADMIN") return workspaceRoutes.controls.href;
+  if (normalized === "OPERATOR" || normalized === "ADMIN") return workspaceRoutes.operations.href;
   return workspaceRoutes.settings.href;
 }
 

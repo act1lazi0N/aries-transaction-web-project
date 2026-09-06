@@ -39,7 +39,7 @@ describe("ProtectedWorkspace", () => {
   it("uses the operational landing for denied operational routes", async () => {
     mocks.role = "OPERATOR";
     render(<ProtectedWorkspace capability="overview:view"><Feature /></ProtectedWorkspace>);
-    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/controls"));
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/operations"));
     expect(mocks.featureRender).not.toHaveBeenCalled();
   });
 

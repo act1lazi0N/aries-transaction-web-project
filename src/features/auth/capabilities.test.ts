@@ -10,7 +10,10 @@ import {
 
 const routeCapabilities: WorkspaceCapability[] = [
   "overview:view",
+  "operations:view",
+  "customers:manage",
   "transactions:view",
+  "ledger:view",
   "transfers:create",
   "controls:operate",
   "settlements:operate",
@@ -22,8 +25,8 @@ describe("workspace capabilities", () => {
   it.each([
     ["USER", ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"]],
     ["MERCHANT", ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"]],
-    ["OPERATOR", ["transactions:view", "controls:operate", "settlements:operate", "settings:view"]],
-    ["ADMIN", ["transactions:view", "controls:operate", "settlements:operate", "settings:view"]],
+    ["OPERATOR", ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view"]],
+    ["ADMIN", ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view"]],
   ] as const)("maps %s to the approved route capabilities", (role, expected) => {
     expect(routeCapabilities.filter(capability => hasCapability(role, capability))).toEqual(expected);
   });
@@ -53,8 +56,8 @@ describe("workspace capabilities", () => {
   it.each([
     ["USER", "/overview"],
     ["MERCHANT", "/overview"],
-    ["OPERATOR", "/controls"],
-    ["ADMIN", "/controls"],
+    ["OPERATOR", "/operations"],
+    ["ADMIN", "/operations"],
     [undefined, "/settings"],
   ] as const)("uses the safe landing for %s", (role, route) => {
     expect(defaultRouteForRole(role)).toBe(route);

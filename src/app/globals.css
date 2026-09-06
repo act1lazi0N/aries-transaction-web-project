@@ -4,8 +4,11 @@
   --aries-accent: #00bfff;
   --aries-accent-foreground: #06202b;
   --aries-background: #f4f7fa;
+  --aries-shell: #fbfdff;
   --aries-surface: #ffffff;
   --aries-surface-muted: #edf2f6;
+  --aries-surface-raised: #ffffff;
+  --aries-overlay: rgba(15, 23, 42, 0.38);
   --aries-foreground: #17212b;
   --aries-muted: #5d6a75;
   --aries-border: #d8e1e8;
@@ -40,6 +43,9 @@ body {
   color: var(--aries-foreground);
   font-family: var(--font-sans);
 }
+
+html { color-scheme: light; }
+::selection { background: color-mix(in srgb, var(--aries-accent) 28%, white); }
 
 button, a { -webkit-tap-highlight-color: transparent; }
 .atc-gradient-zone {

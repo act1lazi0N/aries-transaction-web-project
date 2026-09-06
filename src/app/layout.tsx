@@ -3,11 +3,11 @@ import "./globals.css";
 import { AppProviders } from "@/components/app-providers";
 
 export const metadata: Metadata = {
-  title: "ATC project | Financial operations",
-  description: "ATC project gives teams a calm, precise workspace for backend-confirmed financial operations.",
-  applicationName: "ATC project",
+  title: "Aries | Financial operations",
+  description: "Aries gives teams a calm, precise workspace for backend-confirmed financial operations.",
+  applicationName: "Aries",
   openGraph: {
-    title: "ATC project | Financial operations",
+    title: "Aries | Financial operations",
     description: "A calm, precise workspace for backend-confirmed financial operations.",
     type: "website",
   },

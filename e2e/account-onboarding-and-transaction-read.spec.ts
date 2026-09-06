@@ -147,7 +147,13 @@ for (const role of ["USER", "MERCHANT"] as const) {
     }, role);
 
     await page.goto("/overview?accountId=account-1", { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveText(["Overview", "Transactions", "New transfer", "Settings"]);
+    await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveText([
+      role === "MERCHANT" ? "Merchant Overview" : "Overview",
+      "Transfers",
+      "Transactions",
+      "Accounts",
+      "Settings",
+    ]);
     await page.goto("/controls", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/overview(?:\?accountId=account-1)?$/);
     await expect(page.getByRole("heading", { name: "Operational controls" })).toHaveCount(0);
@@ -157,11 +163,24 @@ for (const role of ["USER", "MERCHANT"] as const) {
 
 for (const role of ["OPERATOR", "ADMIN"] as const) {
   test(`${role} sees only operational navigation and redirects customer routes`, async ({ page }) => {
-    await mockApi(page, async route => notFound(route), role);
+    await mockApi(page, async route => {
+      if (new URL(route.request().url()).pathname === "/api/v1/operations/overview") {
+        return fulfillJson(route, ok({
+          range: "24h",
+          generatedAt: "2026-09-01T00:00:00Z",
+          customers: { users: 4, merchants: 2, active: 5, suspended: 1 },
+          transactions: { total: 8, pending: 1, failed: 0 },
+          reconciliation: { runs: 3, exceptions: 0 },
+          settlements: { batches: 2, pending: 1, failed: 0 },
+          ledger: { entries: 16, journals: 8, unbalancedJournals: 0, healthy: true },
+        }));
+      }
+      return notFound(route);
+    }, role);
     await page.goto("/transfers", { waitUntil: "domcontentloaded" });
-    await expect(page).toHaveURL(/\/controls$/);
-    await expect(page.getByRole("heading", { name: "Operational controls" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveText(["Transactions", "Controls", "Settlements", "Settings"]);
+    await expect(page).toHaveURL(/\/operations$/);
+    await expect(page.getByRole("heading", { name: "System health, without invented certainty." })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveText(["Operations", "Customers", "Transactions", "Ledger", "Controls", "Settlements", "Settings"]);
     await expect(page.getByRole("heading", { name: "Send a transfer" })).toHaveCount(0);
   });
 }

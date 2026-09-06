@@ -39,6 +39,9 @@ export type ReconciliationRun = {
   exceptions: ReconciliationException[];
 };
 
+export type ReconciliationRunSummary = Omit<ReconciliationRun, "exceptions">;
+export type ReconciliationRunPage = { content: ReconciliationRunSummary[]; page: number; size: number; totalElements: number; totalPages: number; first: boolean; last: boolean };
+
 export type ReconciliationLifecycle =
   | { kind: "running"; label: "Running" }
   | { kind: "completed"; label: "Completed" }

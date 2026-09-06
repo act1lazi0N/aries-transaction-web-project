@@ -17,15 +17,15 @@ describe("NavigationLinks", () => {
   it.each(["USER", "MERCHANT"])("shows only customer navigation for %s", role => {
     mocks.role = role;
     render(<NavigationLinks />);
-    expect(linkNames()).toEqual(["Overview", "Transactions", "New transfer", "Settings"]);
-    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute("aria-current", "page");
+    expect(linkNames()).toEqual([role === "MERCHANT" ? "Merchant Overview" : "Overview", "Transfers", "Transactions", "Accounts", "Settings"]);
+    expect(screen.getByRole("link", { name: role === "MERCHANT" ? "Merchant Overview" : "Overview" })).toHaveAttribute("aria-current", "page");
   });
 
   it.each(["OPERATOR", "ADMIN"])("shows only operational navigation for %s", role => {
     mocks.role = role;
     mocks.pathname = "/controls";
     render(<NavigationLinks />);
-    expect(linkNames()).toEqual(["Transactions", "Controls", "Settlements", "Settings"]);
+    expect(linkNames()).toEqual(["Operations", "Customers", "Transactions", "Ledger", "Controls", "Settlements", "Settings"]);
     expect(screen.getByRole("link", { name: "Controls" })).toHaveAttribute("aria-current", "page");
   });
 

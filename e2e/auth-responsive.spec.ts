@@ -13,7 +13,7 @@ test.describe("mobile-first authentication", () => {
     await expect(page.getByLabel("Work email")).toBeVisible();
     await expect(page.getByLabel("Password")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Sign in once, then get back to work." })).toBeHidden();
-    await expect(page.getByRole("link", { name: "Back to ATC project" })).toBeHidden();
+    await expect(page.getByRole("link", { name: "Back to Aries" })).toBeHidden();
     expect((await page.getByLabel("Work email").boundingBox())?.y).toBeLessThan(320);
     expect(await hasHorizontalOverflow(page)).toBe(false);
     expect(runtimeErrors).toEqual([]);
@@ -40,7 +40,7 @@ test("retains the explanatory Login layout on desktop", async ({ page }) => {
   await page.goto("/login", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByRole("heading", { name: "Sign in once, then get back to work." })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to ATC project" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Back to Aries" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sign in", exact: true })).toBeVisible();
 });
 

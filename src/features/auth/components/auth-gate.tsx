@@ -22,5 +22,5 @@ export function AuthGate({ children }: Readonly<{ children: React.ReactNode }>) 
 }
 
 function AuthAccessScreen({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <main className="grid min-h-dvh place-items-center bg-background px-6 py-10"><section className="w-full max-w-md rounded-2xl border border-border bg-surface p-7 shadow-sm"><div className="mb-6 flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-accent text-sm font-bold text-accent-foreground">A</div><div><p className="font-semibold tracking-tight">ATC project</p><p className="text-xs text-muted">Secure workspace access</p></div></div>{children}</section></main>;
+  return <main className="grid min-h-dvh place-items-center bg-background px-6 py-10"><section className="w-full max-w-md rounded-2xl border border-border bg-surface p-7 shadow-sm"><div className="mb-6 flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-accent text-sm font-bold text-accent-foreground">A</div><div><p className="font-semibold tracking-tight">Aries</p><p className="text-xs text-muted">Secure workspace access</p></div></div>{children}</section></main>;
 }
