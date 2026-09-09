@@ -5,7 +5,7 @@ export const authenticatedLandingRoute = "/overview" as const;
 type ReturnToValue = string | string[] | undefined;
 
 const applicationOrigin = "https://aries.local";
-const publicRoutePrefixes = ["/login", "/register"] as const;
+const publicRoutePrefixes = ["/login", "/register", "/verify-email"] as const;
 
 function firstValue(value: ReturnToValue) {
   return Array.isArray(value) ? value[0] : value;

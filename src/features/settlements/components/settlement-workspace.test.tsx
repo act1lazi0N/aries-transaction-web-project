@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SettlementWorkspace } from "@/features/settlements/components/settlement-workspace";
 
-const sessionState = vi.hoisted(() => ({ user: { id: "user-1", fullName: "Aries User", email: "user@example.com", role: "USER", isActive: true, createdAt: "2026-08-12T00:00:00Z" } }));
+const sessionState = vi.hoisted(() => ({ user: { id: "user-1", fullName: "Aries User", email: "user@example.com", role: "USER", isActive: true, emailVerified: false, createdAt: "2026-08-12T00:00:00Z" } }));
 const refetch = vi.fn();
 
 vi.mock("@/features/auth/components/auth-session-provider", () => ({

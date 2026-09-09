@@ -26,7 +26,13 @@ export function LoginForm({ returnTo }: Readonly<{ returnTo: string }>) {
     if (!email.trim() || !password) { setFormError("Enter your email address and password."); return; }
     setIsSubmitting(true);
     try { await session.signIn({ email: email.trim(), password }); }
-    catch (error) { setFormError(error instanceof ApiError && error.kind === "unauthorized" ? "The email or password is incorrect. Check your details and try again." : userFacingErrorMessage(error, "We could not sign you in. Check your details and try again.")); }
+    catch (error) {
+      if (error instanceof ApiError && error.status === 403 && error.code === "ACCOUNT_SUSPENDED") {
+        setFormError("Your account is suspended. Contact support for help.");
+      } else {
+        setFormError(error instanceof ApiError && error.kind === "unauthorized" ? "The email or password is incorrect. Check your details and try again." : userFacingErrorMessage(error, "We could not sign you in. Check your details and try again."));
+      }
+    }
     finally { setIsSubmitting(false); }
   }
 

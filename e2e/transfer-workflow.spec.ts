@@ -104,8 +104,12 @@ async function mockTransferApi(page: Page, accounts: (typeof sourceAccount)[]) {
     if (url.pathname === "/api/v1/auth/refresh") {
       await fulfillJson(route, ok({
         accessToken: "browser-access-token", tokenType: "Bearer", expiresIn: 900,
-        user: { id: "user-1", fullName: "Browser User", email: "browser@example.com", role: "USER", isActive: true, createdAt: "2026-08-01T00:00:00Z" },
+        user: { id: "user-1", fullName: "Browser User", email: "browser@example.com", role: "USER", isActive: true, emailVerified: false, createdAt: "2026-08-01T00:00:00Z" },
       }));
+      return;
+    }
+    if (url.pathname === "/api/v1/notifications/unread-count") {
+      await fulfillJson(route, ok({ unreadCount: 0 }));
       return;
     }
     if (url.pathname === "/api/v1/accounts") {

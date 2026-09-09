@@ -24,7 +24,7 @@ const authenticatedResponse = {
   accessToken: "access-token",
   tokenType: "Bearer" as const,
   expiresIn: 900,
-  user: { id: "user-1", fullName: "Aries User", email: "user@example.com", role: "USER", isActive: true, createdAt: "2026-08-01T00:00:00Z" },
+  user: { id: "user-1", fullName: "Aries User", email: "user@example.com", role: "USER", isActive: true, emailVerified: false, createdAt: "2026-08-01T00:00:00Z" },
 };
 
 describe("AuthSessionProvider unauthorized recovery", () => {

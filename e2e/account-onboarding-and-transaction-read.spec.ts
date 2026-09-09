@@ -180,7 +180,7 @@ for (const role of ["OPERATOR", "ADMIN"] as const) {
     await page.goto("/transfers", { waitUntil: "domcontentloaded" });
     await expect(page).toHaveURL(/\/operations$/);
     await expect(page.getByRole("heading", { name: "System health, without invented certainty." })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveText(["Operations", "Customers", "Transactions", "Ledger", "Controls", "Settlements", "Settings"]);
+    await expect(page.getByRole("navigation", { name: "Primary navigation" }).getByRole("link")).toHaveText(["Operations", "Email deliveries", "Customers", "Transactions", "Ledger", "Controls", "Settlements", "Settings"]);
     await expect(page.getByRole("heading", { name: "Send a transfer" })).toHaveCount(0);
   });
 }
@@ -190,7 +190,8 @@ async function mockApi(page: Page, handler: (route: Route) => Promise<unknown>, 
     const request = route.request();
     const path = new URL(request.url()).pathname;
     if (request.method() === "OPTIONS") return route.fulfill({ status: 204, headers: corsHeaders() });
-    if (path === "/api/v1/auth/refresh") return fulfillJson(route, ok({ accessToken: "browser-access-token", tokenType: "Bearer", expiresIn: 900, user: { id: "user-1", fullName: "Browser User", email: "browser@example.com", role, isActive: true, createdAt: "2026-08-01T00:00:00Z" } }));
+    if (path === "/api/v1/auth/refresh") return fulfillJson(route, ok({ accessToken: "browser-access-token", tokenType: "Bearer", expiresIn: 900, user: { id: "user-1", fullName: "Browser User", email: "browser@example.com", role, isActive: true, emailVerified: false, createdAt: "2026-08-01T00:00:00Z" } }));
+    if (path === "/api/v1/notifications/unread-count") return fulfillJson(route, ok({ unreadCount: 0 }));
     await handler(route);
   });
 }

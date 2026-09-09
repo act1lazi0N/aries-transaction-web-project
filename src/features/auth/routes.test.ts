@@ -19,7 +19,7 @@ describe("authenticated routes", () => {
     expect(resolveAuthenticatedRoute("/accounts/new")).toBe("/accounts/new");
   });
 
-  it.each([undefined, "", "/", "/login", "/register?returnTo=/controls", "/api/v1/auth/me", "/unknown", "https://example.com", "//example.com", "javascript:alert(1)"])(
+  it.each([undefined, "", "/", "/login", "/register?returnTo=/controls", "/verify-email?token=secret", "/api/v1/auth/me", "/unknown", "https://example.com", "//example.com", "javascript:alert(1)"])(
     "falls back to overview for unsafe or public destination %s",
     (destination) => {
       expect(resolveAuthenticatedRoute(destination)).toBe("/overview");

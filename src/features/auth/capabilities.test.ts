@@ -11,6 +11,8 @@ import {
 const routeCapabilities: WorkspaceCapability[] = [
   "overview:view",
   "operations:view",
+  "notification-deliveries:operate",
+  "notifications:view",
   "customers:manage",
   "transactions:view",
   "ledger:view",
@@ -23,10 +25,10 @@ const routeCapabilities: WorkspaceCapability[] = [
 
 describe("workspace capabilities", () => {
   it.each([
-    ["USER", ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"]],
-    ["MERCHANT", ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"]],
-    ["OPERATOR", ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view"]],
-    ["ADMIN", ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view"]],
+    ["USER", ["overview:view", "notifications:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"]],
+    ["MERCHANT", ["overview:view", "notifications:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"]],
+    ["OPERATOR", ["operations:view", "notification-deliveries:operate", "notifications:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view"]],
+    ["ADMIN", ["operations:view", "notification-deliveries:operate", "notifications:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view"]],
   ] as const)("maps %s to the approved route capabilities", (role, expected) => {
     expect(routeCapabilities.filter(capability => hasCapability(role, capability))).toEqual(expected);
   });
@@ -66,6 +68,8 @@ describe("workspace capabilities", () => {
   it("resolves route capabilities without accepting lookalike paths", () => {
     expect(capabilityForPathname("/transactions/detail")).toBe("transactions:view");
     expect(capabilityForPathname("/accounts/new")).toBe("accounts:create");
+    expect(capabilityForPathname("/notifications")).toBe("notifications:view");
+    expect(capabilityForPathname("/operations/notification-email-deliveries")).toBe("notification-deliveries:operate");
     expect(capabilityForPathname("/transactional")).toBeNull();
     expect(isKnownWorkspacePath("/settings")).toBe(true);
     expect(isKnownWorkspacePath("/unknown")).toBe(false);

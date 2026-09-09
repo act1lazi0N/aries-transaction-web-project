@@ -1,6 +1,8 @@
 export type WorkspaceCapability =
   | "overview:view"
   | "operations:view"
+  | "notification-deliveries:operate"
+  | "notifications:view"
   | "customers:manage"
   | "ledger:view"
   | "transactions:view"
@@ -21,7 +23,9 @@ type WorkspaceRouteDefinition = {
 
 export const workspaceRoutes = {
   overview: { href: "/overview", capability: "overview:view" },
+  notificationDeliveries: { href: "/operations/notification-email-deliveries", capability: "notification-deliveries:operate" },
   operations: { href: "/operations", capability: "operations:view" },
+  notifications: { href: "/notifications", capability: "notifications:view" },
   customers: { href: "/customers", capability: "customers:manage" },
   ledger: { href: "/ledger", capability: "ledger:view" },
   transactions: { href: "/transactions", capability: "transactions:view" },
@@ -33,10 +37,10 @@ export const workspaceRoutes = {
 } as const satisfies Record<string, WorkspaceRouteDefinition>;
 
 const roleCapabilities = {
-  USER: ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"],
-  MERCHANT: ["overview:view", "transactions:view", "transfers:create", "settings:view", "accounts:create", "transactions:refund"],
-  OPERATOR: ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse", "transactions:refund"],
-  ADMIN: ["operations:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse"],
+  USER: ["overview:view", "notifications:view", "transactions:view", "transfers:create", "settings:view", "accounts:create"],
+  MERCHANT: ["overview:view", "notifications:view", "transactions:view", "transfers:create", "settings:view", "accounts:create", "transactions:refund"],
+  OPERATOR: ["operations:view", "notification-deliveries:operate", "notifications:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse", "transactions:refund"],
+  ADMIN: ["operations:view", "notification-deliveries:operate", "notifications:view", "customers:manage", "transactions:view", "ledger:view", "controls:operate", "settlements:operate", "settings:view", "transactions:reverse"],
 } as const satisfies Record<KnownRole, readonly WorkspaceCapability[]>;
 
 const routeDefinitions = Object.values(workspaceRoutes);
