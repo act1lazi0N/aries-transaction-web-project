@@ -53,12 +53,14 @@ describe("AccountRequiredGate", () => {
     expect(screen.getByText("Protected workspace")).toBeVisible();
   });
 
-  it("opens the new account overview without revealing the previous workspace", async () => {
+  it("reveals the confirmed account workspace after navigation without remounting the gate", async () => {
     const user = userEvent.setup();
-    render(<AccountRequiredGate><div>Protected workspace</div></AccountRequiredGate>);
+    const { rerender } = render(<AccountRequiredGate><div>Protected workspace</div></AccountRequiredGate>);
     await user.click(screen.getByRole("button", { name: "Complete onboarding" }));
-    expect(screen.queryByText("Protected workspace")).not.toBeInTheDocument();
-    expect(screen.getByRole("status", { name: "Opening your account overview" })).toBeVisible();
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/overview?accountId=account-1"));
+    mocks.query = { data: [{ id: "account-1" }], isPending: false, isError: false, refetch: mocks.refetch };
+    rerender(<AccountRequiredGate><div>Protected workspace</div></AccountRequiredGate>);
+    expect(screen.getByText("Protected workspace")).toBeVisible();
+    expect(screen.queryByRole("status", { name: "Opening your account overview" })).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Route } from "next";
-import { useState } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { ApiError } from "@/lib/api/errors";
 export function AccountRequiredGate({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = useAuthSession();
   const router = useRouter();
-  const [isEnteringWorkspace, setIsEnteringWorkspace] = useState(false);
+  const [isEnteringWorkspace, startWorkspaceTransition] = useTransition();
   const requiresOwnedAccount = requiresFirstFinancialAccount(session.user?.role);
   const accountsQuery = useAccounts(requiresOwnedAccount);
 
@@ -31,8 +31,10 @@ export function AccountRequiredGate({ children }: Readonly<{ children: React.Rea
   return children;
 
   function openOverview(account: Account) {
-    setIsEnteringWorkspace(true);
-    router.replace(`/overview?accountId=${encodeURIComponent(account.id)}` as Route);
+    // Search-param navigation preserves this gate, so loading must end with the transition.
+    startWorkspaceTransition(() => {
+      router.replace(`/overview?accountId=${encodeURIComponent(account.id)}` as Route);
+    });
   }
 }
 

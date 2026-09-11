@@ -4,43 +4,61 @@ const createdAccount = {
   id: "account-1", userId: "user-1", accountNumber: "100000000001", accountType: "PERSONAL", balance: "0", currency: "VND", status: "ACTIVE", createdAt: "2026-08-29T08:00:00Z", description: "Daily",
 };
 
-test("first-account onboarding blocks direct financial navigation and submits once", async ({ page }) => {
-  const calls: Record<string, unknown>[] = [];
-  let accounts: typeof createdAccount[] = [];
-  const runtimeErrors = collectRuntimeErrors(page);
-  await mockApi(page, async route => {
-    const request = route.request();
-    const path = new URL(request.url()).pathname;
-    if (path === "/api/v1/accounts" && request.method() === "GET") return fulfillJson(route, ok(accounts));
-    if (path === "/api/v1/accounts" && request.method() === "POST") {
-      calls.push(request.postDataJSON() as Record<string, unknown>);
-      await new Promise(resolve => setTimeout(resolve, 75));
-      accounts = [createdAccount];
-      return fulfillJson(route, ok(createdAccount));
+for (const entryRoute of ["/overview", "/transactions?page=0&size=20&sort=createdAt%2Cdesc"]) {
+  test(`first-account onboarding from ${entryRoute} opens overview and submits once`, async ({ page }, testInfo) => {
+    const calls: Record<string, unknown>[] = [];
+    let accounts: typeof createdAccount[] = [];
+    const runtimeErrors = collectRuntimeErrors(page);
+    await mockApi(page, async route => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+      if (path === "/api/v1/accounts" && request.method() === "GET") return fulfillJson(route, ok(accounts));
+      if (path === "/api/v1/accounts" && request.method() === "POST") {
+        calls.push(request.postDataJSON() as Record<string, unknown>);
+        await new Promise(resolve => setTimeout(resolve, 75));
+        accounts = [createdAccount];
+        return fulfillJson(route, ok(createdAccount));
+      }
+      if (path === "/api/v1/transfers/account/account-1") return fulfillJson(route, ok(emptyTransactionPage()));
+      return notFound(route);
+    });
+
+    await page.goto(entryRoute, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("heading", { name: "Create your first financial account" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Create your first financial account" })).toBeFocused();
+    await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+    await page.locator("label").filter({ hasText: "Personal" }).click();
+    await page.getByLabel(/Description/).fill("Daily");
+    await page.getByRole("button", { name: "Review account" }).click();
+    await page.getByRole("button", { name: "Create financial account" }).dblclick();
+
+    await expect(page.getByRole("heading", { name: "Financial account created" })).toBeVisible();
+    expect(calls).toHaveLength(1);
+    expect(Object.keys(calls[0] ?? {}).sort()).toEqual(["accountType", "currency", "description", "idempotencyKey"]);
+    expect(calls[0]).toMatchObject({ accountType: "PERSONAL", currency: "VND", description: "Daily" });
+    let releaseNavigation = () => {};
+    const navigationReady = new Promise<void>(resolve => { releaseNavigation = resolve; });
+    await page.route("**/overview?**", async route => {
+      if (route.request().headers()["rsc"] === "1") await navigationReady;
+      await route.continue();
+    });
+    try {
+      await page.getByRole("button", { name: "Continue to workspace" }).click();
+      await expect(page.getByRole("status", { name: "Opening your account overview" })).toBeVisible();
+      await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
+    } finally {
+      releaseNavigation();
     }
-    if (path === "/api/v1/transfers/account/account-1") return fulfillJson(route, ok(emptyTransactionPage()));
-    return notFound(route);
+    await expect(page).toHaveURL(/\/overview\?accountId=account-1/);
+    await expect(page.getByRole("heading", { name: "A clear view of what needs attention." })).toBeVisible();
+    await expect(page.getByRole("status", { name: "Opening your account overview" })).toHaveCount(0);
+    await expect(page.locator("select#overview-account")).toHaveValue(createdAccount.id);
+    expect(calls).toHaveLength(1);
+    expect(runtimeErrors).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath("overview.png"), fullPage: true });
   });
-
-  await page.goto("/transactions?page=0&size=20&sort=createdAt%2Cdesc", { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Create your first financial account" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Create your first financial account" })).toBeFocused();
-  await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
-  await page.locator("label").filter({ hasText: "Personal" }).click();
-  await page.getByLabel(/Description/).fill("Daily");
-  await page.getByRole("button", { name: "Review account" }).click();
-  await page.getByRole("button", { name: "Create financial account" }).dblclick();
-
-  await expect(page.getByRole("heading", { name: "Financial account created" })).toBeVisible();
-  expect(calls).toHaveLength(1);
-  expect(Object.keys(calls[0] ?? {}).sort()).toEqual(["accountType", "currency", "description", "idempotencyKey"]);
-  expect(calls[0]).toMatchObject({ accountType: "PERSONAL", currency: "VND", description: "Daily" });
-  await page.getByRole("button", { name: "Continue to workspace" }).click();
-  await expect(page).toHaveURL(/\/overview\?accountId=account-1/);
-  await expect(page.getByRole("heading", { name: "A clear view of what needs attention." })).toBeVisible();
-  expect(runtimeErrors).toEqual([]);
-});
+}
 
 test("unknown account result replays the same idempotency key", async ({ page }) => {
   const calls: Record<string, unknown>[] = [];
