@@ -12,7 +12,7 @@ import { EmptyState, ErrorState, StatusBanner, WorkspaceSkeleton } from "@/compo
 import { deliveryPurposeLabel, deliveryStatusLabel, formatNotificationDate } from "@/features/notifications/format";
 import { useEmailDeliveries, useRedriveEmailDelivery } from "@/features/notifications/queries";
 import type { EmailDeliveryFilters, EmailDeliveryStatus } from "@/features/notifications/types";
-import { userFacingErrorMessage } from "@/lib/api/errors";
+import { ApiError, userFacingErrorMessage } from "@/lib/api/errors";
 
 const deliveryTabs: { value: EmailDeliveryStatus; label: string }[] = [
   { value: "DEAD_LETTERED", label: "Dead-lettered" },
@@ -43,6 +43,12 @@ export function EmailDeliveryWorkspace({ initialFilters }: { initialFilters: Ema
       setUnknownIds(previous => without(previous, deliveryId));
       setFeedback({ tone: "success", title: "Delivery queued", detail: `The service accepted the redrive and returned ${deliveryStatusLabel(result.status)}. Delivery itself is not yet confirmed.` });
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        setUnknownIds(previous => without(previous, deliveryId));
+        setFeedback({ tone: "warning", title: "Redrive rejected", detail: "The service rejected this redrive. The delivery may no longer be eligible. Refreshing the queue does not make an expired or replaced reset link usable." });
+        await query.refetch();
+        return;
+      }
       setUnknownIds(previous => new Set(previous).add(deliveryId));
       setFeedback({ tone: "warning", title: "Redrive outcome unknown", detail: userFacingErrorMessage(error, "Refresh the dead-letter queue before deciding whether another redrive is safe.") });
     }
@@ -54,7 +60,7 @@ export function EmailDeliveryWorkspace({ initialFilters }: { initialFilters: Ema
     const stillDeadLettered = result.data?.content.some(delivery => delivery.id === deliveryId && delivery.status === "DEAD_LETTERED") ?? false;
     if (stillDeadLettered) {
       setUnknownIds(previous => without(previous, deliveryId));
-      setFeedback({ tone: "warning", title: "Delivery is still dead-lettered", detail: "The refreshed queue confirms that a new explicit redrive is available." });
+      setFeedback({ tone: "warning", title: "Delivery is still dead-lettered", detail: "The service will check eligibility for any new redrive. This queue status does not prove that a password reset link is still usable." });
     } else if (result.data) {
       setFeedback({ tone: "success", title: "Delivery left this queue", detail: "The refreshed dead-letter queue no longer contains this delivery. Check another status filter for its current state." });
     }

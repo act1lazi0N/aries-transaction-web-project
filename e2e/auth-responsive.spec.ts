@@ -11,7 +11,7 @@ test.describe("mobile-first authentication", () => {
 
     await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
     await expect(page.getByLabel("Work email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
+    await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Sign in once, then get back to work." })).toBeHidden();
     await expect(page.getByRole("link", { name: "Back to Aries" })).toBeHidden();
     expect((await page.getByLabel("Work email").boundingBox())?.y).toBeLessThan(320);

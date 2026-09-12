@@ -84,7 +84,7 @@ export type EmailVerificationStatus = { emailVerified: boolean };
 export type MarkAllReadResult = { updatedCount: number; readThrough: string };
 
 export type EmailDeliveryStatus = "PENDING" | "PROCESSING" | "DELIVERED" | "FAILED" | "DEAD_LETTERED" | "CANCELLED";
-export type EmailDeliveryPurpose = "TRANSACTION_NOTIFICATION" | "WEBHOOK_ALERT" | "EMAIL_VERIFICATION";
+export type EmailDeliveryPurpose = "TRANSACTION_NOTIFICATION" | "WEBHOOK_ALERT" | "EMAIL_VERIFICATION" | "PASSWORD_RESET" | "PASSWORD_CHANGED";
 
 export type EmailDelivery = {
   id: string;

@@ -27,6 +27,14 @@ vi.mock("@/features/notifications/queries", () => ({
 }));
 
 describe("EmailDeliveryWorkspace", () => {
+  it("treats a rejected security email redrive as rejected and refreshes the queue", async () => {
+    mocks.redrive.mockRejectedValue(new ApiError("ineligible", { kind: "conflict", status: 409 }));
+    render(<EmailDeliveryWorkspace initialFilters={{ status: "DEAD_LETTERED", page: 0, size: 20 }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Redrive" }));
+    expect(await screen.findByText("Redrive rejected")).toBeVisible();
+    expect(mocks.refetch).toHaveBeenCalledOnce();
+    expect(screen.queryByText("Redrive outcome unknown")).not.toBeInTheDocument();
+  });
   beforeEach(() => {
     cleanup(); vi.clearAllMocks();
     mocks.refetch.mockResolvedValue({ data: { content: [deadLettered] } });

@@ -141,16 +141,20 @@ test("narrow keyboard onboarding keeps the decision path and focus order", async
   expect(statusBox!.y).toBeGreaterThan(formBox!.y + formBox!.height);
 });
 
-test("first-account onboarding blocks Settings and every workspace escape except sign out", async ({ page }) => {
+test("first-account onboarding permits Security settings while financial workspaces remain gated", async ({ page }) => {
   await mockApi(page, async route => {
     if (new URL(route.request().url()).pathname === "/api/v1/accounts") return fulfillJson(route, ok([]));
     return notFound(route);
   });
-  await page.goto("/settings", { waitUntil: "domcontentloaded" });
+  await page.goto("/overview", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Create your first financial account" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Profile and access" })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Primary navigation" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Password and sign-in access" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Create your first financial account" })).toHaveCount(0);
+  await page.goto("/transactions", { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("heading", { name: "Create your first financial account" })).toBeVisible();
 });
 
 for (const role of ["USER", "MERCHANT"] as const) {

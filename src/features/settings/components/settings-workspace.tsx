@@ -3,6 +3,7 @@
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 import { formatUserRole } from "@/features/auth/format";
 import { NotificationPreferencesPanel } from "@/features/notifications/components/notification-preferences";
+import { SecurityPanel } from "@/features/auth/components/security-panel";
 
 function formatDate(value: string) {
   const parsed = new Date(value);
@@ -17,7 +18,7 @@ export function SettingsWorkspace() {
   if (!user) return null;
 
   return <section className="space-y-8" aria-labelledby="settings-title">
-    <div><p className="text-sm font-medium text-accent">Settings</p><h1 id="settings-title" className="mt-1 text-3xl font-semibold tracking-tight">Profile and notifications</h1><p className="mt-3 max-w-2xl text-muted">Review your read-only identity details and choose how Aries may send notification email.</p></div>
+    <div><p className="text-sm font-medium text-accent">Settings</p><h1 id="settings-title" className="mt-1 text-3xl font-semibold tracking-tight">Profile, security and notifications</h1><p className="mt-3 max-w-2xl text-muted">Review your read-only identity details, manage sign-in access and choose how Aries may send notification email.</p></div>
     <section aria-labelledby="profile-title" className="rounded-2xl border border-border bg-surface p-6 lg:p-8">
       <div><p className="text-sm font-medium text-accent">Profile</p><h2 id="profile-title" className="mt-1 text-xl font-semibold">Your details</h2></div>
       <dl className="mt-6 grid gap-x-8 gap-y-5 text-sm sm:grid-cols-2">
@@ -29,6 +30,7 @@ export function SettingsWorkspace() {
         <InfoItem label="User ID" value={user.id} monospace />
       </dl>
     </section>
+    <SecurityPanel />
     <NotificationPreferencesPanel />
   </section>;
 }

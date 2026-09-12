@@ -16,7 +16,12 @@ export function deliveryStatusLabel(status: EmailDeliveryStatus) {
 }
 
 export function deliveryPurposeLabel(purpose: EmailDeliveryPurpose) {
-  if (purpose === "TRANSACTION_NOTIFICATION") return "Transaction notification";
-  if (purpose === "WEBHOOK_ALERT") return "Webhook alert";
-  return "Email verification";
+  const labels = {
+    TRANSACTION_NOTIFICATION: "Transaction notification",
+    WEBHOOK_ALERT: "Webhook alert",
+    EMAIL_VERIFICATION: "Email verification",
+    PASSWORD_RESET: "Password reset",
+    PASSWORD_CHANGED: "Password changed",
+  } satisfies Record<EmailDeliveryPurpose, string>;
+  return labels[purpose];
 }

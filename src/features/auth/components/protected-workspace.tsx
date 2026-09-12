@@ -23,5 +23,5 @@ function CapabilityBoundary({ capability, children }: Readonly<{ capability: Wor
   }, [allowed, destination, router]);
 
   if (!allowed) return <main className="grid min-h-dvh place-items-center bg-background px-6 py-10"><div role="status" className="flex items-center gap-3 text-sm text-muted"><span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-accent" />Opening your workspace…</div></main>;
-  return <AccountRequiredGate>{children}</AccountRequiredGate>;
+  return capability === "settings:view" ? children : <AccountRequiredGate>{children}</AccountRequiredGate>;
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 import { ApiError, userFacingErrorMessage } from "@/lib/api/errors";
 import { authRouteWithReturnTo, resolveAuthorizedRouteForRole } from "@/features/auth/routes";
@@ -37,8 +38,9 @@ export function LoginForm({ returnTo }: Readonly<{ returnTo: string }>) {
   }
 
   return <form onSubmit={submit} noValidate className="space-y-5" aria-describedby={formError ? "login-error" : undefined}>
+    {session.notice && <p role="status" className={`text-sm leading-6 ${session.notice.tone === "success" ? "text-[var(--aries-success)]" : "text-[var(--aries-warning)]"}`}>{session.notice.message}</p>}
     <div><label htmlFor="email" className="mb-2 block text-sm font-medium">Work email</label><input id="email" name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} required value={email} onChange={event => setEmail(event.target.value)} className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm outline-none transition-colors focus:border-accent" /></div>
-    <div><div className="mb-2 flex items-center justify-between"><label htmlFor="password" className="text-sm font-medium">Password</label><span className="text-xs text-muted">8–72 characters</span></div><input id="password" name="password" type="password" autoComplete="current-password" minLength={8} maxLength={72} required value={password} onChange={event => setPassword(event.target.value)} className="h-11 w-full rounded-lg border border-border bg-surface px-3 text-sm outline-none transition-colors focus:border-accent" /></div>
+    <div><div className="mb-2 flex flex-wrap items-center justify-between gap-2"><label htmlFor="password" className="text-sm font-medium">Password</label><Link href={"/forgot-password" as Route} className="inline-flex min-h-10 items-center rounded text-sm font-medium text-accent hover:underline">Forgot password?</Link></div><PasswordInput id="password" name="password" visibilityLabel="password" autoComplete="current-password" required value={password} onChange={event => setPassword(event.target.value)} /></div>
     {formError && <p id="login-error" role="alert" className="text-sm text-[var(--aries-danger)]">{formError}</p>}
     <Button type="submit" className="w-full" disabled={session.status === "loading" || isSubmitting}>{isSubmitting ? "Signing in…" : session.status === "loading" ? "Checking your session…" : "Sign in"}</Button>
     <p className="text-center text-sm text-muted">Do you need an account? <Link href={authRouteWithReturnTo("/register", returnTo) as Route} className="font-semibold text-accent hover:underline">Create an account</Link></p>

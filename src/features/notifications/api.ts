@@ -28,7 +28,7 @@ const notificationTypes = new Set<NotificationType>([
 ]);
 const directions = new Set<NotificationDirection>(["INCOMING", "OUTGOING", "OWN_ACCOUNTS"]);
 const deliveryStatuses = new Set<EmailDeliveryStatus>(["PENDING", "PROCESSING", "DELIVERED", "FAILED", "DEAD_LETTERED", "CANCELLED"]);
-const deliveryPurposes = new Set<EmailDeliveryPurpose>(["TRANSACTION_NOTIFICATION", "WEBHOOK_ALERT", "EMAIL_VERIFICATION"]);
+const deliveryPurposes = new Set<EmailDeliveryPurpose>(["TRANSACTION_NOTIFICATION", "WEBHOOK_ALERT", "EMAIL_VERIFICATION", "PASSWORD_RESET", "PASSWORD_CHANGED"]);
 
 export function getNotifications(filters: NotificationFilters, request: AuthRequest): Promise<PageResponse<NotificationRecord>> {
   return request<unknown>(`/api/v1/notifications?${parameters(filters)}`).then(value => parsePage(value, parseNotification));

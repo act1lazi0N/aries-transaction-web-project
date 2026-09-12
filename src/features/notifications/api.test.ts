@@ -47,6 +47,10 @@ const deadLetteredDelivery = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("notification API contracts", () => {
+  it.each(["PASSWORD_RESET", "PASSWORD_CHANGED"])("accepts security email purpose %s", async purpose => {
+    const result = await getEmailDeliveries({ status: "DEAD_LETTERED", page: 0, size: 20 }, requestWith(page([{ ...deadLetteredDelivery, purpose }])));
+    expect(result.content[0].purpose).toBe(purpose);
+  });
   it("keeps exact transaction amounts and projects only typed safe details", async () => {
     const result = await getNotifications({ status: "ALL", page: 0, size: 20 }, requestWith(page([transactionNotification])));
     expect(result.content[0].data).toMatchObject({ kind: "transaction", amount: "1234567890123456.78", fromAccountDisplay: "********1111" });
