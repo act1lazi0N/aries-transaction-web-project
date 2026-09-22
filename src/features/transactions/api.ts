@@ -1,7 +1,7 @@
 import { apiRequest } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { exactDecimalString } from "@/lib/api/decimal";
-import type { PageResponse, Transaction } from "@/features/transactions/types";
+import type { AccountNumberExposure, PageResponse, Transaction, TransactionDirection, TransactionPartyView, TransactionRead } from "@/features/transactions/types";
 import type { AuthRequest } from "@/features/auth/request-types";
 
 export type TransactionHistoryParams = {
@@ -21,22 +21,22 @@ export function transactionDetailPath(transactionId: string): string {
   return `/api/v1/transfers/${encodeURIComponent(transactionId)}`;
 }
 
-export function getTransactionHistory(params: TransactionHistoryParams, request?: AuthRequest): Promise<PageResponse<Transaction>> {
+export function getTransactionHistory(params: TransactionHistoryParams, request?: AuthRequest): Promise<PageResponse<TransactionRead>> {
   const path = transactionHistoryPath(params);
   const response = request ? request<unknown>(path) : apiRequest<unknown>(path, { accessToken: params.accessToken });
   return response.then(parseTransactionPage);
 }
 
-export function getTransaction(transactionId: string, request?: AuthRequest): Promise<Transaction> {
+export function getTransaction(transactionId: string, request?: AuthRequest): Promise<TransactionRead> {
   const path = transactionDetailPath(transactionId);
   const response = request ? request<unknown>(path) : apiRequest<unknown>(path);
-  return response.then(value => parseTransaction(value));
+  return response.then(value => parseTransactionRead(value));
 }
 
-export function parseTransactionPage(value: unknown): PageResponse<Transaction> {
+export function parseTransactionPage(value: unknown): PageResponse<TransactionRead> {
   if (!isRecord(value) || !Array.isArray(value.content)) throw invalidContract("transaction page");
   return {
-    content: value.content.map((item, index) => parseTransaction(item, index)),
+    content: value.content.map((item, index) => parseTransactionRead(item, index)),
     number: requiredNumber(value.number, "page number"),
     size: requiredNumber(value.size, "page size"),
     totalElements: requiredNumber(value.totalElements, "total elements"),
@@ -44,6 +44,16 @@ export function parseTransactionPage(value: unknown): PageResponse<Transaction> 
     first: requiredBoolean(value.first, "first page"),
     last: requiredBoolean(value.last, "last page"),
     empty: requiredBoolean(value.empty, "empty flag"),
+  };
+}
+
+export function parseTransactionRead(value: unknown, index?: number): TransactionRead {
+  if (!isRecord(value)) throw invalidContract(index === undefined ? "transaction read" : `transaction read at index ${index}`);
+  return {
+    ...parseTransaction(value, index),
+    fromParty: parseTransactionParty(value.fromParty, "source party"),
+    toParty: parseTransactionParty(value.toParty, "destination party"),
+    direction: parseDirection(value.direction),
   };
 }
 
@@ -84,6 +94,30 @@ function requiredString(value: unknown, field: string): string {
 function nullableString(value: unknown, field: string): string | null {
   if (value === null) return null;
   return requiredString(value, field);
+}
+
+function parseTransactionParty(value: unknown, field: string): TransactionPartyView {
+  if (!isRecord(value)) throw invalidContract(field);
+  const ownedByRequester = requiredBoolean(value.ownedByRequester, `${field} ownership`);
+  const exposure = parseExposure(value.exposure);
+  const accountNumberDisplay = nullableString(value.accountNumberDisplay, `${field} account number`);
+  const displayName = nullableString(value.displayName, `${field} display name`);
+  if (exposure === "UNAVAILABLE" || exposure === "FULL_OWNED" && !ownedByRequester) {
+    return { accountNumberDisplay: null, exposure: "UNAVAILABLE", displayName: null, ownedByRequester };
+  }
+  return { accountNumberDisplay, exposure, displayName, ownedByRequester };
+}
+
+function parseExposure(value: unknown): AccountNumberExposure {
+  if (value === "FULL_OWNED" || value === "MASKED_COUNTERPARTY" || value === "UNAVAILABLE") return value;
+  if (typeof value === "string") return "UNAVAILABLE";
+  throw invalidContract("account number exposure");
+}
+
+function parseDirection(value: unknown): TransactionDirection {
+  if (value === "INCOMING" || value === "OUTGOING" || value === "OWN_ACCOUNTS" || value === "UNKNOWN") return value;
+  if (typeof value === "string") return "UNKNOWN";
+  throw invalidContract("transaction direction");
 }
 
 function requiredNumber(value: unknown, field: string): number {

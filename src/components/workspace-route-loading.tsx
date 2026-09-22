@@ -1,0 +1,3 @@
+export function WorkspaceRouteLoading() {
+  return <main className="grid min-h-dvh place-items-center bg-background px-6 py-10"><div role="status" aria-label="Loading workspace" className="w-full max-w-md rounded-2xl border border-border bg-surface p-7 shadow-sm"><div className="flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-accent text-sm font-bold text-accent-foreground">A</div><div><p className="font-semibold">Preparing your workspace</p><p className="mt-1 text-sm text-muted">Checking the page and your current access…</p></div></div><div className="mt-7 space-y-3"><div className="h-4 w-2/3 animate-pulse rounded bg-surface-muted" /><div className="h-24 animate-pulse rounded-xl bg-surface-muted" /></div></div></main>;
+}

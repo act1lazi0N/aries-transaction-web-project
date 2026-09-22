@@ -1,7 +1,8 @@
 import { AppShell } from "@/components/app-shell";
-import { AuthGate } from "@/features/auth/components/auth-gate";
+import { workspaceRoutes } from "@/features/auth/capabilities";
+import { ProtectedWorkspace } from "@/features/auth/components/protected-workspace";
 import { SettingsWorkspace } from "@/features/settings/components/settings-workspace";
 
 export default function SettingsPage() {
-  return <AppShell><AuthGate><SettingsWorkspace /></AuthGate></AppShell>;
+  return <ProtectedWorkspace capability={workspaceRoutes.settings.capability}><AppShell><SettingsWorkspace /></AppShell></ProtectedWorkspace>;
 }

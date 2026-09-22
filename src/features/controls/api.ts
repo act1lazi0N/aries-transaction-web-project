@@ -2,7 +2,7 @@ import { apiRequest, type ApiResponse } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { exactDecimalString } from "@/lib/api/decimal";
 import type { AuthRequest } from "@/features/auth/request-types";
-import type { ReconciliationException, ReconciliationRequest, ReconciliationRun } from "@/features/controls/types";
+import type { ReconciliationException, ReconciliationRequest, ReconciliationRun, ReconciliationRunPage, ReconciliationRunSummary } from "@/features/controls/types";
 
 export const reconciliationPaths = {
   runs: "/api/v1/reconciliation/runs",
@@ -20,6 +20,18 @@ export function createReconciliationRun(request: ReconciliationRequest, authRequ
 export function getReconciliationRun(runId: string, authRequest?: AuthRequest): Promise<ReconciliationRun> {
   const run = authRequest ?? (<T>(path: string, options?: RequestInit) => apiRequest<T>(path, options));
   return run<unknown>(reconciliationPaths.detail(runId)).then(parseReconciliationRun);
+}
+
+export function getReconciliationRuns(page: number, size: number, authRequest: AuthRequest): Promise<ReconciliationRunPage> {
+  return authRequest<unknown>(`${reconciliationPaths.runs}?page=${page}&size=${size}`).then(value => {
+    if (!isRecord(value) || !Array.isArray(value.content)) throw invalidContract("reconciliation run page");
+    return { content: value.content.map(parseReconciliationRunSummary), page: requiredCount(value.page, "page"), size: requiredCount(value.size, "page size"), totalElements: requiredCount(value.totalElements, "total elements"), totalPages: requiredCount(value.totalPages, "total pages"), first: requiredBoolean(value.first, "first page"), last: requiredBoolean(value.last, "last page") };
+  });
+}
+
+function parseReconciliationRunSummary(value: unknown): ReconciliationRunSummary {
+  if (!isRecord(value)) throw invalidContract("reconciliation run summary");
+  return { id: requiredString(value.id, "run id"), currency: requiredString(value.currency, "currency"), windowStart: requiredString(value.windowStart, "window start"), windowEnd: requiredString(value.windowEnd, "window end"), status: requiredString(value.status, "status"), sourceCount: requiredCount(value.sourceCount, "source count"), reportingCount: requiredCount(value.reportingCount, "reporting count"), exceptionCount: requiredCount(value.exceptionCount, "exception count"), createdAt: requiredString(value.createdAt, "created time"), completedAt: nullableString(value.completedAt, "completed time") };
 }
 
 export function parseReconciliationRun(value: unknown): ReconciliationRun {
@@ -69,6 +81,7 @@ function requiredCount(value: unknown, field: string): number {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
   throw invalidContract(field);
 }
+function requiredBoolean(value: unknown, field: string): boolean { if (typeof value === "boolean") return value; throw invalidContract(field); }
 
 function requiredMoney(value: unknown, field: string): string {
   const decimal = exactDecimalString(value);

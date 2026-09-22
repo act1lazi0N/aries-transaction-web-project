@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { authPaths, logout, register } from "@/features/auth/api";
 
-const authResponse = { accessToken: "access-token", tokenType: "Bearer", expiresIn: 900, user: { id: "user-1", fullName: "Aries User", email: "user@example.com", role: "USER", isActive: true, createdAt: "2026-08-13T00:00:00Z" } };
+const authResponse = { accessToken: "access-token", tokenType: "Bearer", expiresIn: 900, user: { id: "user-1", fullName: "Aries User", email: "user@example.com", role: "USER", isActive: true, emailVerified: false, createdAt: "2026-08-13T00:00:00Z" } };
 
 afterEach(() => vi.unstubAllGlobals());
 

@@ -11,14 +11,27 @@ export type ApiErrorKind =
 export class ApiError extends Error {
   readonly kind: ApiErrorKind;
   readonly status: number | null;
+  readonly code: string | null;
+  readonly errors: Record<string, string> | null;
   readonly requestId: string | null;
+  readonly retryAfterSeconds: number | null;
 
-  constructor(message: string, options: { kind: ApiErrorKind; status?: number | null; requestId?: string | null }) {
+  constructor(message: string, options: {
+    kind: ApiErrorKind;
+    status?: number | null;
+    code?: string | null;
+    errors?: Record<string, string> | null;
+    requestId?: string | null;
+    retryAfterSeconds?: number | null;
+  }) {
     super(message);
     this.name = "ApiError";
     this.kind = options.kind;
     this.status = options.status ?? null;
+    this.code = options.code ?? null;
+    this.errors = options.errors ?? null;
     this.requestId = options.requestId ?? null;
+    this.retryAfterSeconds = options.retryAfterSeconds ?? null;
   }
 }
 
@@ -64,6 +77,17 @@ function messageFromPayload(payload: unknown): string | null {
   return typeof payload.message === "string" ? payload.message : null;
 }
 
+function codeFromPayload(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  return typeof payload.code === "string" && payload.code.length > 0 ? payload.code : null;
+}
+
+function fieldErrorsFromPayload(payload: unknown): Record<string, string> | null {
+  if (!isRecord(payload) || !isRecord(payload.errors)) return null;
+  const entries = Object.entries(payload.errors).filter((entry): entry is [string, string] => typeof entry[1] === "string");
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
+}
+
 function errorKind(status: number): ApiErrorKind {
   if (status === 401) return "unauthorized";
   if (status === 403) return "forbidden";
@@ -79,10 +103,27 @@ export async function normalizeApiError(response: Response): Promise<ApiError> {
   try { payload = await response.json(); } catch { /* non-JSON error body */ }
   const requestId = isRecord(payload) && typeof payload.requestId === "string" ? payload.requestId : null;
   return new ApiError(messageFromPayload(payload) ?? `Request failed with status ${response.status}`, {
-    kind: errorKind(response.status), status: response.status, requestId,
+    kind: errorKind(response.status),
+    status: response.status,
+    code: codeFromPayload(payload),
+    errors: fieldErrorsFromPayload(payload),
+    requestId,
+    retryAfterSeconds: parseRetryAfterSeconds(response.headers.get("Retry-After")),
   });
 }
 
 export function normalizeNetworkError(error: unknown): ApiError {
   return new ApiError(error instanceof Error ? error.message : "The network request could not be completed", { kind: "network" });
+}
+
+export function parseRetryAfterSeconds(value: string | null, now = Date.now()): number | null {
+  if (!value) return null;
+  const normalized = value.trim();
+  if (/^\d+$/.test(normalized)) {
+    const seconds = Number(normalized);
+    return Number.isSafeInteger(seconds) ? seconds : null;
+  }
+  const timestamp = Date.parse(normalized);
+  if (!Number.isFinite(timestamp)) return null;
+  return Math.max(0, Math.ceil((timestamp - now) / 1000));
 }

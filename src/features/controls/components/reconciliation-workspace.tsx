@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
+import { hasCapability } from "@/features/auth/capabilities";
 import { useCreateReconciliationRun } from "@/features/controls/mutations";
 import { useReconciliationRun } from "@/features/controls/queries";
 import { initialReconciliationDraft, toReconciliationRequest, type ReconciliationDraft, validateReconciliationDraft } from "@/features/controls/form";
@@ -27,7 +28,7 @@ export function ReconciliationWorkspace({ initialRunId }: Props) {
   const [runIdInput, setRunIdInput] = useState(initialRunId ?? "");
   const mutation = useCreateReconciliationRun();
   const query = useReconciliationRun(selectedRunId);
-  const canOperate = ["OPERATOR", "ADMIN"].includes(session.user?.role.toUpperCase() ?? "");
+  const canOperate = hasCapability(session.user?.role, "controls:operate");
 
   function submitDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

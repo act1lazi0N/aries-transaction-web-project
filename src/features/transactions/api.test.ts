@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseTransactionPage } from "@/features/transactions/api";
+import { parseTransaction, parseTransactionPage, parseTransactionRead } from "@/features/transactions/api";
 
 const transaction = {
   id: "tx-1",
@@ -15,6 +15,9 @@ const transaction = {
   refundedAmount: null,
   createdAt: "2026-08-13T00:00:00Z",
   completedAt: "2026-08-13T00:00:01Z",
+  fromParty: { accountNumberDisplay: "100000000001", exposure: "FULL_OWNED", displayName: "Everyday account", ownedByRequester: true },
+  toParty: { accountNumberDisplay: "******7788", exposure: "MASKED_COUNTERPARTY", displayName: "Verified recipient", ownedByRequester: false },
+  direction: "OUTGOING",
 };
 
 function page(content: unknown[]) {
@@ -32,5 +35,16 @@ describe("parseTransactionPage", () => {
 
   it("rejects malformed money instead of rendering an unsafe value", () => {
     expect(() => parseTransactionPage(page([{ ...transaction, amount: "not-money" }]))).toThrow("invalid transaction amount");
+  });
+
+  it("keeps projection optional on mutation snapshots but mandatory on reads", () => {
+    const { fromParty: _fromParty, toParty: _toParty, direction: _direction, ...mutationSnapshot } = transaction;
+    expect(parseTransaction(mutationSnapshot)).not.toHaveProperty("direction");
+    expect(() => parseTransactionRead(mutationSnapshot)).toThrow("invalid source party");
+  });
+
+  it("fails closed instead of exposing a foreign number marked as fully owned", () => {
+    const parsed = parseTransactionRead({ ...transaction, toParty: { ...transaction.toParty, exposure: "FULL_OWNED", ownedByRequester: false, accountNumberDisplay: "999999999999" } });
+    expect(parsed.toParty).toEqual({ accountNumberDisplay: null, exposure: "UNAVAILABLE", displayName: null, ownedByRequester: false });
   });
 });

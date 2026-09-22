@@ -6,6 +6,8 @@ out
 !.env.example
 *.tsbuildinfo
 coverage
+test-results
+playwright-report
 
 # Private AI configuration and logs — never commit or expose
 /.agents/

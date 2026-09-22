@@ -2,15 +2,28 @@ import { apiRequest } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { exactDecimalString } from "@/lib/api/decimal";
 import type { AuthRequest } from "@/features/auth/request-types";
-import type { SettlementBatch, SettlementItem } from "@/features/settlements/types";
+import type { SettlementBatch, SettlementBatchPage, SettlementBatchSummary, SettlementItem } from "@/features/settlements/types";
 
 export const settlementPaths = {
+  batches: "/api/v1/settlements/batches",
   detail: (batchId: string) => `/api/v1/settlements/batches/${encodeURIComponent(batchId)}`,
 } as const;
 
 export function getSettlementBatch(batchId: string, request?: AuthRequest): Promise<SettlementBatch> {
   const run = request ?? (<T>(path: string, options?: RequestInit) => apiRequest<T>(path, options));
   return run<unknown>(settlementPaths.detail(batchId)).then(parseSettlementBatch);
+}
+
+export function getSettlementBatches(page: number, size: number, request: AuthRequest): Promise<SettlementBatchPage> {
+  return request<unknown>(`${settlementPaths.batches}?page=${page}&size=${size}`).then(value => {
+    if (!isRecord(value) || !Array.isArray(value.content)) throw invalidContract("settlement batch page");
+    return { content: value.content.map(parseSettlementBatchSummary), page: requiredInteger(value.page, "page"), size: requiredInteger(value.size, "page size"), totalElements: requiredInteger(value.totalElements, "total elements"), totalPages: requiredInteger(value.totalPages, "total pages"), first: requiredBoolean(value.first, "first page"), last: requiredBoolean(value.last, "last page") };
+  });
+}
+
+function parseSettlementBatchSummary(value: unknown): SettlementBatchSummary {
+  if (!isRecord(value)) throw invalidContract("settlement batch summary");
+  return { id: requiredString(value.id, "batch id"), currency: requiredString(value.currency, "currency"), grossAmount: requiredMoney(value.grossAmount, "gross amount"), feeAmount: requiredMoney(value.feeAmount, "fee amount"), netAmount: requiredMoney(value.netAmount, "net amount"), feeRateBps: requiredInteger(value.feeRateBps, "fee rate"), cutoffCompletedAt: requiredString(value.cutoffCompletedAt, "cutoff"), status: requiredString(value.status, "status"), createdAt: requiredString(value.createdAt, "created time") };
 }
 
 export function parseSettlementBatch(value: unknown): SettlementBatch {
@@ -63,6 +76,7 @@ function requiredInteger(value: unknown, field: string): number {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
   throw invalidContract(field);
 }
+function requiredBoolean(value: unknown, field: string): boolean { if (typeof value === "boolean") return value; throw invalidContract(field); }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

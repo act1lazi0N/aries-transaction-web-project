@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { parseAccounts } from "@/features/accounts/api";
+import { describe, expect, it, vi } from "vitest";
+import { createAccount, parseAccounts } from "@/features/accounts/api";
 
 const account = {
   id: "account-1",
@@ -10,6 +10,7 @@ const account = {
   currency: "VND",
   status: "ACTIVE",
   createdAt: "2026-08-18T00:00:00Z",
+  description: null,
 };
 
 describe("parseAccounts", () => {
@@ -23,5 +24,18 @@ describe("parseAccounts", () => {
 
   it("rejects malformed account contracts", () => {
     expect(() => parseAccounts([{ ...account, balance: "not-money" }])).toThrow("invalid account balance");
+  });
+
+  it("sends only the strict create-account contract and parses the authoritative snapshot", async () => {
+    const request = vi.fn().mockResolvedValue({ ...account, description: "Daily operations" });
+    const payload = { accountType: "PERSONAL" as const, currency: "VND" as const, description: "Daily operations", idempotencyKey: "account-key-1234567890" };
+
+    await expect(createAccount(payload, request)).resolves.toMatchObject({ accountNumber: account.accountNumber, description: "Daily operations" });
+    expect(request).toHaveBeenCalledWith("/api/v1/accounts", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      financialMutation: true,
+    });
+    expect(Object.keys(JSON.parse(request.mock.calls[0]?.[1]?.body as string)).sort()).toEqual(["accountType", "currency", "description", "idempotencyKey"]);
   });
 });

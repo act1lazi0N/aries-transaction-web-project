@@ -30,6 +30,9 @@ export type SettlementBatch = {
   items: SettlementItem[];
 };
 
+export type SettlementBatchSummary = Omit<SettlementBatch, "items" | "idempotencyKey">;
+export type SettlementBatchPage = { content: SettlementBatchSummary[]; page: number; size: number; totalElements: number; totalPages: number; first: boolean; last: boolean };
+
 export type SettlementLifecycle =
   | { kind: "pending"; label: "Pending" }
   | { kind: "processing"; label: "Processing" }

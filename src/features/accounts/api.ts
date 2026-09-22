@@ -2,13 +2,25 @@ import { apiRequest } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { exactDecimalString } from "@/lib/api/decimal";
 import type { AuthRequest } from "@/features/auth/request-types";
-import type { Account } from "@/features/accounts/types";
+import type { Account, CreateAccountRequest } from "@/features/accounts/types";
 
 export const accountPath = "/api/v1/accounts";
 
 export function getAccounts(request?: AuthRequest): Promise<Account[]> {
   const run = request ?? (<T>(path: string, options?: RequestInit) => apiRequest<T>(path, options));
   return run<unknown>(accountPath).then(parseAccounts);
+}
+
+export function createAccount(payload: CreateAccountRequest, request?: AuthRequest): Promise<Account> {
+  const options = {
+    method: "POST",
+    body: JSON.stringify(payload),
+    financialMutation: true,
+  } satisfies RequestInit & { financialMutation: boolean };
+  const response = request
+    ? request<unknown>(accountPath, options)
+    : apiRequest<unknown>(accountPath, { method: options.method, body: options.body });
+  return response.then(value => parseAccount(value));
 }
 
 export function parseAccounts(value: unknown): Account[] {
@@ -27,6 +39,7 @@ export function parseAccount(value: unknown, index?: number): Account {
     currency: requiredString(value.currency, "account currency"),
     status: requiredString(value.status, "account status"),
     createdAt: requiredString(value.createdAt, "account creation time"),
+    description: optionalNullableString(value.description, "account description"),
   };
 }
 
@@ -38,6 +51,12 @@ function requiredString(value: unknown, field: string): string {
 function requiredMoney(value: unknown, field: string): string {
   const decimal = exactDecimalString(value);
   if (decimal !== null) return decimal;
+  throw invalidContract(field);
+}
+
+function optionalNullableString(value: unknown, field: string): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value === "string") return value;
   throw invalidContract(field);
 }
 
