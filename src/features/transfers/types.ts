@@ -1,3 +1,5 @@
+import type { ResolvedQr } from "@/features/qr/api";
+import type { EnrollmentState } from "@/features/smart-otp/api";
 import type { Transaction } from "@/features/transactions/types";
 
 export type TransferMode = "EXTERNAL" | "OWN_ACCOUNTS";
@@ -20,7 +22,8 @@ export type OwnAccountsTransferDraft = CommonTransferDraft & {
   toAccountId: string;
 };
 
-export type TransferDraft = ExternalTransferDraft | OwnAccountsTransferDraft;
+export type QrTransferDraft = CommonTransferDraft & { mode: "QR"; qr: ResolvedQr };
+export type TransferDraft = ExternalTransferDraft | OwnAccountsTransferDraft | QrTransferDraft;
 
 export type ExternalTransferPreviewRequest = {
   mode: "EXTERNAL";
@@ -42,9 +45,11 @@ export type OwnAccountsTransferPreviewRequest = {
   recipientAccountNumber?: never;
 };
 
-export type TransferPreviewRequest = ExternalTransferPreviewRequest | OwnAccountsTransferPreviewRequest;
+export type QrTransferPreviewRequest = { sourceAccountId: string; qrCodeId: string; amount?: string; description?: string; currency?: "VND"; mode?: never; toAccountId?: never; recipientAccountNumber?: never };
+export type TransferPreviewRequest = (ExternalTransferPreviewRequest & { qrCodeId?: never }) | (OwnAccountsTransferPreviewRequest & { qrCodeId?: never }) | QrTransferPreviewRequest;
 
 export type TransferExecuteRequest = {
+  authorizationId?: string;
   previewId: string;
   idempotencyKey: string;
 };
@@ -64,6 +69,8 @@ export type TransferPreview = {
   debitTotal: string;
   currency: "VND";
   warnings: string[];
+  authorizationRequirement: "NONE" | "SMART_OTP";
+  enrollmentState: EnrollmentState;
 };
 
 export type TransferField = "sourceAccountId" | "recipientAccountNumber" | "toAccountId" | "amount" | "description";
@@ -72,9 +79,9 @@ export type TransferFieldErrors = Partial<Record<TransferField, string>>;
 export type TransferWorkflowState =
   | { tag: "editing"; draft: TransferDraft; fieldErrors: TransferFieldErrors; formError?: string; retryAt?: number }
   | { tag: "previewing"; draft: TransferDraft }
-  | { tag: "review"; draft: TransferDraft; preview: TransferPreview; idempotencyKey: string }
-  | { tag: "executing"; draft: TransferDraft; preview: TransferPreview; idempotencyKey: string }
+  | { tag: "review"; draft: TransferDraft; preview: TransferPreview; idempotencyKey: string; authorizationId?: string }
+  | { tag: "executing"; draft: TransferDraft; preview: TransferPreview; idempotencyKey: string; authorizationId?: string }
   | { tag: "expired"; draft: TransferDraft; message: string }
-  | { tag: "unknown"; draft: TransferDraft; preview: TransferPreview; idempotencyKey: string; requestId?: string; code?: string }
+  | { tag: "unknown"; draft: TransferDraft; preview: TransferPreview; idempotencyKey: string; authorizationId?: string; requestId?: string; code?: string }
   | { tag: "result"; draft: TransferDraft; transaction: Transaction }
   | { tag: "rejected"; draft: TransferDraft; message: string; requestId?: string; code?: string; blocked: boolean };

@@ -17,7 +17,7 @@ export type TransferWorkflowAction =
   | { type: "preview_succeeded"; preview: TransferPreview; idempotencyKey: string }
   | { type: "edit" }
   | { type: "preview_expired"; message: string }
-  | { type: "execute_started" }
+  | { type: "execute_started"; authorizationId?: string }
   | { type: "execute_unknown"; requestId?: string; code?: string }
   | { type: "execute_rejected"; message: string; requestId?: string; code?: string; blocked: boolean }
   | { type: "execute_succeeded"; transaction: Transaction }
@@ -53,6 +53,8 @@ export function changeTransferDraftMode(draft: TransferDraft, mode: TransferRout
 export function transferWorkflowReducer(state: TransferWorkflowState, action: TransferWorkflowAction): TransferWorkflowState {
   switch (action.type) {
     case "route_changed": {
+      if (["executing", "unknown", "rejected"].includes(state.tag)) return state;
+      if (state.draft.mode === "QR") return state.draft.sourceAccountId === action.sourceAccountId ? state : { tag: "editing", draft: { ...state.draft, sourceAccountId: action.sourceAccountId }, fieldErrors: {} };
       const expectedMode = routeModeToTransferMode(action.mode);
       if (state.draft.mode === expectedMode && state.draft.sourceAccountId === action.sourceAccountId) return state;
       const draft = state.draft.mode === expectedMode ? state.draft : changeTransferDraftMode(state.draft, action.mode);
@@ -80,13 +82,14 @@ export function transferWorkflowReducer(state: TransferWorkflowState, action: Tr
       if (state.tag !== "previewing") return state;
       return { tag: "review", draft: state.draft, preview: action.preview, idempotencyKey: action.idempotencyKey };
     case "edit":
+      if (state.tag === "executing" || state.tag === "unknown") return state;
       return { tag: "editing", draft: state.draft, fieldErrors: {} };
     case "preview_expired":
       if (state.tag !== "review" && state.tag !== "executing") return state;
       return { tag: "expired", draft: state.draft, message: action.message };
     case "execute_started":
       if (state.tag !== "review" && state.tag !== "unknown") return state;
-      return { tag: "executing", draft: state.draft, preview: state.preview, idempotencyKey: state.idempotencyKey };
+      return { tag: "executing", draft: state.draft, preview: state.preview, idempotencyKey: state.idempotencyKey, authorizationId: action.authorizationId ?? state.authorizationId };
     case "execute_unknown":
       if (state.tag !== "executing") return state;
       return {
@@ -94,6 +97,7 @@ export function transferWorkflowReducer(state: TransferWorkflowState, action: Tr
         draft: state.draft,
         preview: state.preview,
         idempotencyKey: state.idempotencyKey,
+        authorizationId: state.authorizationId,
         requestId: action.requestId,
         code: action.code,
       };
@@ -110,6 +114,8 @@ export function transferWorkflowReducer(state: TransferWorkflowState, action: Tr
       if (state.tag !== "executing") return state;
       return { tag: "result", draft: state.draft, transaction: action.transaction };
     case "start_over":
+      if (state.tag === "executing" || state.tag === "unknown") return state;
+      if (state.draft.mode === "QR") return { tag: "editing", draft: state.draft, fieldErrors: {} };
       return {
         tag: "editing",
         draft: createTransferDraft(state.draft.mode === "OWN_ACCOUNTS" ? "own-accounts" : "external", state.draft.sourceAccountId),

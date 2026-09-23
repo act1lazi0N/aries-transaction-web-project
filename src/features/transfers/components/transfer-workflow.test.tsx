@@ -45,7 +45,7 @@ const preview = {
   fee: "10.00",
   debitTotal: "1010.00",
   currency: "VND" as const,
-  warnings: ["Recipient details were verified by the service."],
+  authorizationRequirement: "NONE" as const, enrollmentState: "UNAVAILABLE" as const, warnings: ["Recipient details were verified by the service."],
 };
 const completedTransaction = {
   id: "transaction-1", fromAccountId: "source-1", toAccountId: "recipient-2", amount: "1000.00", currency: "VND", status: "COMPLETED",

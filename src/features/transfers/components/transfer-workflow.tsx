@@ -1,5 +1,9 @@
 "use client";
 
+import { useCooldown } from "@/features/auth/use-security-operation";
+import { OtpApproval } from "@/features/smart-otp/components/otp-approval";
+import type { ResolvedQr } from "@/features/qr/api";
+import { qrError } from "@/features/qr/api";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -41,6 +45,8 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   routeMode: TransferRouteMode;
+  qr?: ResolvedQr;
+  onBusyChange?: (busy: boolean) => void;
   initialAccountId?: string;
   transactionId?: string;
 };
@@ -53,10 +59,11 @@ const draftSteps: ReadonlyArray<{ number: DraftStep; label: string; shortLabel: 
   { number: 3, label: "Amount & note", shortLabel: "Details" },
 ];
 
-export function TransferWorkflow({ routeMode, initialAccountId, transactionId }: Props) {
+export function TransferWorkflow({ routeMode, initialAccountId, transactionId, qr, onBusyChange }: Props) {
   const router = useRouter();
-  const [state, dispatch] = useReducer(transferWorkflowReducer, undefined, () => createInitialTransferState(routeMode, initialAccountId));
-  const [draftStep, setDraftStep] = useState<DraftStep>(1);
+  const executionCooldown = useCooldown();
+  const [state, dispatch] = useReducer(transferWorkflowReducer, undefined, (): TransferWorkflowState => qr ? { tag: "editing", fieldErrors: {}, draft: { mode: "QR", qr, sourceAccountId: initialAccountId ?? "", currency: "VND", amount: qr.amount ?? "", description: qr.description ?? "" } } : createInitialTransferState(routeMode, initialAccountId));
+  const [draftStep, setDraftStep] = useState<DraftStep>(qr ? 2 : 1);
   const [now, setNow] = useState(() => Date.now());
   const previewInFlight = useRef(false);
   const executeInFlight = useRef(false);
@@ -78,7 +85,9 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
   const retryAt = state.tag === "editing" ? state.retryAt : undefined;
   const retrySeconds = retryAt ? Math.max(0, Math.ceil((retryAt - now) / 1000)) : 0;
   const formLocked = state.tag !== "editing" || Boolean(transactionId);
-  const hasEnoughAccounts = draft.mode === "EXTERNAL" ? eligibleAccounts.length >= 1 : eligibleAccounts.length >= 2;
+  const hasEnoughAccounts = draft.mode !== "OWN_ACCOUNTS" ? eligibleAccounts.length >= 1 : eligibleAccounts.length >= 2;
+
+  useEffect(() => { onBusyChange?.(["previewing", "review", "executing", "unknown"].includes(state.tag) || state.tag === "rejected" && state.blocked); }, [state, onBusyChange]);
 
   useEffect(() => {
     dispatch({ type: "route_changed", mode: routeMode, sourceAccountId: routeSourceAccountId });
@@ -102,8 +111,8 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
   }, [now, state]);
 
   const updateRoute = useCallback((mode: TransferRouteMode, accountId: string, nextTransactionId?: string) => {
-    router.replace(transferRoutePath({ mode, accountId: accountId || undefined, transactionId: nextTransactionId }) as Route, { scroll: false });
-  }, [router]);
+    router.replace(transferRoutePath({ view: qr ? "pay-qr" : undefined, mode, accountId: accountId || undefined, transactionId: nextTransactionId }) as Route, { scroll: false });
+  }, [router, qr]);
 
   function updateDraft(nextDraft: TransferDraft) {
     dispatch({ type: "draft_updated", draft: nextDraft });
@@ -118,7 +127,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
 
   function selectSource(sourceAccountId: string) {
     if (formLocked) return;
-    const nextDraft = draft.mode === "EXTERNAL"
+    const nextDraft = draft.mode !== "OWN_ACCOUNTS"
       ? { ...draft, sourceAccountId }
       : { ...draft, sourceAccountId, toAccountId: draft.toAccountId === sourceAccountId ? "" : draft.toAccountId };
     updateDraft(nextDraft);
@@ -148,7 +157,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
   }
 
   function goBack() {
-    if (formLocked || draftStep === 1) return;
+    if (formLocked || draftStep === (qr ? 2 : 1)) return;
     showDraftStep(draftStep === 3 ? 2 : 1);
   }
 
@@ -182,7 +191,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
       dispatch({
         type: "preview_failed",
         fieldErrors: nextFieldErrors,
-        formError: previewErrorMessage(error),
+        formError: qr ? qrError(error) : previewErrorMessage(error),
         retryAt: retryAfterSeconds === null ? undefined : Date.now() + retryAfterSeconds * 1_000,
       });
       showDraftStep(previewErrorStep(error, nextFieldErrors));
@@ -192,20 +201,23 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
     }
   }
 
-  async function confirmOrRetry() {
-    if ((state.tag !== "review" && state.tag !== "unknown") || executeInFlight.current || transactionId) return;
-    const attempt = { preview: state.preview, idempotencyKey: state.idempotencyKey, draft: state.draft };
+  async function confirmOrRetry(authorizationId?: string) {
+    if ((state.tag !== "review" && state.tag !== "unknown") || executeInFlight.current || transactionId || executionCooldown.seconds > 0) return;
+    if (state.tag === "review" && (Date.now() >= Date.parse(state.preview.expiresAt) || state.preview.authorizationRequirement === "SMART_OTP" && !authorizationId)) return;
+    const attempt = { preview: state.preview, idempotencyKey: state.idempotencyKey, draft: state.draft, authorizationId: authorizationId ?? state.authorizationId };
     executeInFlight.current = true;
-    dispatch({ type: "execute_started" });
+    dispatch({ type: "execute_started", authorizationId: attempt.authorizationId });
     try {
       const transaction = await executeMutation.mutateAsync({
         previewId: attempt.preview.previewId,
         idempotencyKey: attempt.idempotencyKey,
+        ...(attempt.authorizationId ? { authorizationId: attempt.authorizationId } : {}),
       });
       dispatch({ type: "execute_succeeded", transaction });
       updateRoute(toRouteMode(attempt.draft), attempt.draft.sourceAccountId, transaction.id);
       focusStatusRegion(statusRegionRef);
     } catch (error) {
+      if (error instanceof ApiError && error.retryAfterSeconds) executionCooldown.start(error.retryAfterSeconds);
       const decision = executeErrorDecision(error);
       if (decision.kind === "expired") {
         dispatch({ type: "preview_expired", message: decision.message });
@@ -231,7 +243,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
   function startAnother() {
     dispatch({ type: "start_over" });
     updateRoute(toRouteMode(draft), draft.sourceAccountId);
-    showDraftStep(1);
+    showDraftStep(qr ? 2 : 1);
   }
 
   return <AuthGate><div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.76fr)]">
@@ -253,7 +265,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
             {draftStep === 1
               ? "Select whether you are sending to another person or moving money between your own accounts."
               : draftStep === 2
-                ? draft.mode === "EXTERNAL" ? "Choose the source account and enter the recipient account number." : "Choose two different accounts that belong to you."
+                ? draft.mode === "QR" ? "Choose the source account for this QR payment." : draft.mode === "EXTERNAL" ? "Choose the source account and enter the recipient account number." : "Choose two different accounts that belong to you."
                 : "Enter the transfer amount and add an optional description before creating the preview."}
           </p>
         </div>
@@ -293,7 +305,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
             autoComplete="off"
             error={fieldErrors.recipientAccountNumber}
             required
-          /> : <AccountSelect
+          /> : draft.mode === "QR" ? <div className="space-y-1 text-sm"><p className="font-medium">{draft.qr.recipient.displayName}</p><p className="font-mono text-muted">{draft.qr.recipient.accountNumberMasked}</p><p>{draft.qr.type === "PAYMENT_REQUEST" ? "Fixed payment request" : "Reusable account QR"}</p></div> : <AccountSelect
             accounts={eligibleAccounts}
             value={draft.toAccountId}
             onChange={toAccountId => updateDraft({ ...draft, toAccountId })}
@@ -315,6 +327,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
               value={draft.amount}
               onChange={amount => updateDraft({ ...draft, amount })}
               disabled={formLocked}
+              readOnly={draft.mode === "QR" && draft.qr.type === "PAYMENT_REQUEST"}
               inputMode="decimal"
               error={fieldErrors.amount}
               helper="Minimum 1000 VND; up to two decimal places."
@@ -328,6 +341,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
             value={draft.description}
             onChange={description => updateDraft({ ...draft, description })}
             disabled={formLocked}
+            readOnly={draft.mode === "QR" && draft.qr.type === "PAYMENT_REQUEST"}
             maxLength={255}
             error={fieldErrors.description}
             helper="Optional, up to 255 characters."
@@ -339,7 +353,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
       {retrySeconds > 0 && <p role="status" className="text-sm text-[var(--aries-warning)]">Preview requests are available again in {retrySeconds} seconds.</p>}
 
       <div className="flex flex-wrap items-center gap-3">
-        {draftStep > 1 && <Button type="button" variant="secondary" onClick={goBack} disabled={formLocked}>Back</Button>}
+        {draftStep > (qr ? 2 : 1) && <Button type="button" variant="secondary" onClick={goBack} disabled={formLocked}>Back</Button>}
         {draftStep < 3 ? <Button type="submit" className="ml-auto" disabled={formLocked || accountsQuery.isPending || !hasEnoughAccounts}>Next</Button> : <Button type="submit" className="ml-auto" disabled={formLocked || !hasEnoughAccounts || retrySeconds > 0 || previewMutation.isPending}>
           {state.tag === "previewing" ? <><Clock3 aria-hidden="true" size={16} className="mr-2 animate-pulse" />Creating preview…</> : <>Review transfer <Send aria-hidden="true" size={16} /></>}
         </Button>}
@@ -347,7 +361,9 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
     </form>
 
     <section ref={statusRegionRef} tabIndex={-1} aria-labelledby="transfer-status-title" aria-live="polite" className="rounded-2xl border border-border bg-surface p-5 outline-none sm:p-6 lg:sticky lg:top-6">
+      {executionCooldown.seconds > 0 && <p role="status" className="mb-3 text-sm text-muted">Try again in {executionCooldown.seconds}s.</p>}
       <StatusPanel
+        confirmDisabled={executionCooldown.seconds > 0}
         state={state}
         now={now}
         transactionId={transactionId}
@@ -357,7 +373,7 @@ export function TransferWorkflow({ routeMode, initialAccountId, transactionId }:
         onRefreshTransaction={() => void transactionQuery.refetch()}
         onEdit={editDetails}
         onCreatePreview={() => void requestPreview()}
-        onConfirm={() => void confirmOrRetry()}
+        onConfirm={authorizationId => void confirmOrRetry(authorizationId)}
         onStartAnother={startAnother}
       />
     </section>
@@ -410,7 +426,8 @@ function Field({ id, label, value, onChange, disabled, inputMode, autoComplete, 
   </label>;
 }
 
-function StatusPanel({ state, now, transactionId, transaction, transactionPending, transactionError, onRefreshTransaction, onEdit, onCreatePreview, onConfirm, onStartAnother }: {
+function StatusPanel({ confirmDisabled, state, now, transactionId, transaction, transactionPending, transactionError, onRefreshTransaction, onEdit, onCreatePreview, onConfirm, onStartAnother }: {
+  confirmDisabled: boolean;
   state: TransferWorkflowState;
   now: number;
   transactionId?: string;
@@ -420,7 +437,7 @@ function StatusPanel({ state, now, transactionId, transaction, transactionPendin
   onRefreshTransaction: () => void;
   onEdit: () => void;
   onCreatePreview: () => void;
-  onConfirm: () => void;
+  onConfirm: (authorizationId?: string) => void;
   onStartAnother: () => void;
 }) {
   if (transactionId || state.tag === "result") {
@@ -429,12 +446,12 @@ function StatusPanel({ state, now, transactionId, transaction, transactionPendin
   if (state.tag === "previewing") return <MessageState icon={<Clock3 aria-hidden="true" className="animate-pulse text-[var(--aries-pending)]" size={20} />} title="Creating verified preview" detail="The backend is checking ownership, recipient availability, currency, amount, and total debit. Nothing has been sent." />;
   if (state.tag === "review" || state.tag === "executing") return <PreviewReview state={state} now={now} onEdit={onEdit} onConfirm={onConfirm} />;
   if (state.tag === "expired") return <MessageState icon={<Clock3 aria-hidden="true" className="text-[var(--aries-warning)]" size={20} />} title="Preview unavailable" detail={state.message} tone="warning" actions={<><Button type="button" onClick={onCreatePreview}>Create new preview</Button><Button type="button" variant="secondary" onClick={onEdit}>Edit details</Button></>} />;
-  if (state.tag === "unknown") return <MessageState icon={<ShieldAlert aria-hidden="true" className="text-[var(--aries-warning)]" size={20} />} title="Transfer status unavailable" detail="Aries could not confirm whether the backend completed this transfer. Do not start another transfer. Check safely with the same preview and idempotency key." tone="warning" requestId={state.requestId} actions={<><Button type="button" onClick={onConfirm}>Check safely</Button><TransactionHistoryLink accountId={state.draft.sourceAccountId} /></>} />;
+  if (state.tag === "unknown") return <MessageState icon={<ShieldAlert aria-hidden="true" className="text-[var(--aries-warning)]" size={20} />} title="Transfer status unavailable" detail="Aries could not confirm whether the backend completed this transfer. Do not start another transfer. Check safely with the same preview and idempotency key." tone="warning" requestId={state.requestId} actions={<><Button type="button" disabled={confirmDisabled} onClick={() => onConfirm()}>Check safely</Button><TransactionHistoryLink accountId={state.draft.sourceAccountId} /></>} />;
   if (state.tag === "rejected") return <MessageState icon={<XCircle aria-hidden="true" className="text-[var(--aries-danger)]" size={20} />} title={state.blocked ? "Transfer needs investigation" : "Transfer rejected"} detail={state.message} tone="danger" requestId={state.requestId} actions={state.blocked ? <TransactionHistoryLink accountId={state.draft.sourceAccountId} /> : <><Button type="button" variant="secondary" onClick={onEdit}>Review details</Button><TransactionHistoryLink accountId={state.draft.sourceAccountId} /></>} />;
   return <MessageState icon={<ShieldAlert aria-hidden="true" className="text-[var(--aries-warning)]" size={20} />} title="Before you send" detail="Your backend-verified masked review will appear here. A preview does not move money, and a submitted transfer is not completed until its transaction status confirms it." />;
 }
 
-function PreviewReview({ state, now, onEdit, onConfirm }: { state: Extract<TransferWorkflowState, { tag: "review" | "executing" }>; now: number; onEdit: () => void; onConfirm: () => void }) {
+function PreviewReview({ state, now, onEdit, onConfirm }: { state: Extract<TransferWorkflowState, { tag: "review" | "executing" }>; now: number; onEdit: () => void; onConfirm: (authorizationId?: string) => void }) {
   const preview = state.preview;
   const remainingSeconds = Math.max(0, Math.ceil((Date.parse(preview.expiresAt) - now) / 1_000));
   return <div>
@@ -451,11 +468,11 @@ function PreviewReview({ state, now, onEdit, onConfirm }: { state: Extract<Trans
     {preview.warnings.length > 0 && <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-[var(--aries-warning)]"><p className="font-semibold">Review these warnings</p><ul className="mt-2 list-disc space-y-1 pl-5">{preview.warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul></div>}
     <p role="status" className="mt-4 flex items-center gap-2 text-sm text-[var(--aries-warning)]"><Clock3 aria-hidden="true" size={15} />Expires at {formatTimestamp(preview.expiresAt)} · {formatCountdown(remainingSeconds)} remaining</p>
     {state.tag === "executing" && <p role="status" className="mt-3 text-sm text-[var(--aries-pending)]">Submitting… The backend has not confirmed the result yet.</p>}
-    <div className="mt-6 flex flex-wrap gap-2"><Button type="button" onClick={onConfirm} disabled={state.tag === "executing"}>{state.tag === "executing" ? "Submitting…" : "Confirm and send"}</Button><Button type="button" variant="secondary" onClick={onEdit} disabled={state.tag === "executing"}>Edit details</Button></div>
+    <div className="mt-6 space-y-4">{state.tag === "review" && preview.authorizationRequirement === "SMART_OTP" ? <OtpApproval key={preview.previewId} preview={preview} idempotencyKey={state.idempotencyKey} onConfirm={onConfirm} /> : <Button type="button" onClick={() => onConfirm()} disabled={state.tag === "executing"}>{state.tag === "executing" ? "Submitting..." : "Confirm and send"}</Button>}<Button type="button" variant="secondary" onClick={onEdit} disabled={state.tag === "executing"}>Edit details</Button></div>
   </div>;
 }
 
-function TransactionResult({ transaction, isPending, error, onRefresh, onStartAnother }: { transaction?: Transaction; isPending: boolean; error: Error | null; onRefresh: () => void; onStartAnother: () => void }) {
+export function TransactionResult({ transaction, isPending, error, onRefresh, onStartAnother }: { transaction?: Transaction; isPending: boolean; error: Error | null; onRefresh: () => void; onStartAnother: () => void }) {
   if (isPending && !transaction) return <MessageState icon={<RefreshCw aria-hidden="true" className="animate-spin text-[var(--aries-pending)]" size={20} />} title="Loading transaction status" detail="Aries is reading the authoritative transaction record. No status is being inferred locally." />;
   if (error && !transaction) return <MessageState icon={<AlertTriangle aria-hidden="true" className="text-[var(--aries-danger)]" size={20} />} title="Transaction status unavailable" detail="The transaction record could not be loaded. Aries will not guess whether it completed." tone="danger" actions={<Button type="button" variant="secondary" onClick={onRefresh}>Try again</Button>} />;
   if (!transaction) return <MessageState icon={<AlertTriangle aria-hidden="true" className="text-[var(--aries-warning)]" size={20} />} title="Transaction status unavailable" detail="No authoritative transaction record is available." tone="warning" />;

@@ -1,5 +1,6 @@
 "use client";
 
+import { clearTransferRecovery, readTransferRecovery } from "@/features/transfers/recovery";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/lib/api/errors";
@@ -44,6 +45,7 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
   const refreshInFlight = useRef<{ epoch: number; promise: Promise<string> } | null>(null);
 
   const clearLocalSession = useCallback((nextNotice: SessionNotice | null, clearCache = true) => {
+    clearTransferRecovery();
     advanceAuthEpoch(authEpoch);
     refreshInFlight.current = null;
     tokenRef.current = null;
@@ -72,6 +74,7 @@ export function AuthSessionProvider({ children }: Readonly<{ children: React.Rea
 
   const establishSession = useCallback(async (response: AuthResponse, expectedEpoch: number) => {
     if (!isCurrentAuthEpoch(authEpoch, expectedEpoch)) throw new ApiError("The authentication session changed", { kind: "unauthorized" });
+    readTransferRecovery(response.user.id);
     tokenRef.current = response.accessToken;
     setUser(response.user);
     setStatus("authenticated");

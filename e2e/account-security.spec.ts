@@ -14,6 +14,7 @@ async function mockApi(context: BrowserContext, options: { active?: boolean; han
       state.refreshes++;
       await json(route, state.active ? { success: true, data: auth } : { code: "UNAUTHORIZED" }, state.active ? 200 : 401); return;
     }
+    if (path.endsWith("/auth/smart-otp/status")) { await json(route, { success: true, data: { mode: "DISABLED", enrollmentState: "UNAVAILABLE", deviceId: null } }); return; }
     if (path.endsWith("/auth/me")) { await json(route, state.active ? { success: true, data: user } : { code: "UNAUTHORIZED" }, state.active ? 200 : 401); return; }
     if (path.endsWith("/accounts")) { state.accountReads++; await json(route, { success: true, data: [] }); return; }
     if (path.endsWith("/notifications/unread-count")) { await json(route, { success: true, data: { unreadCount: 0 } }); return; }

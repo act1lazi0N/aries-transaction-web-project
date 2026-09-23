@@ -4,7 +4,7 @@ import { createInitialTransferState, transferWorkflowReducer } from "@/features/
 const preview = {
   previewId: "preview-1", expiresAt: "2026-08-28T15:05:00+07:00",
   source: { accountNumberMasked: "******1111", displayName: "Source" }, recipient: { accountNumberMasked: "******2222", displayName: "Recipient" },
-  amount: "1000.00", fee: "0", debitTotal: "1000.00", currency: "VND" as const, warnings: [],
+  amount: "1000.00", fee: "0", debitTotal: "1000.00", currency: "VND" as const, authorizationRequirement: "NONE" as const, enrollmentState: "UNAVAILABLE" as const, warnings: [],
 };
 
 describe("transfer workflow reducer", () => {

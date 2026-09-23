@@ -1,3 +1,5 @@
+import { enumeration } from "@/features/qr/api";
+import { enrollmentStates } from "@/features/smart-otp/api";
 import { apiRequest } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import { parseTransaction } from "@/features/transactions/api";
@@ -43,6 +45,8 @@ export function parseTransferPreview(value: unknown): TransferPreview {
     debitTotal: requiredMoneyString(value.debitTotal, "debit total"),
     currency,
     warnings: requiredWarnings(value.warnings),
+    authorizationRequirement: enumeration(value.authorizationRequirement, ["NONE", "SMART_OTP"]),
+    enrollmentState: enumeration(value.enrollmentState, enrollmentStates),
   };
 }
 

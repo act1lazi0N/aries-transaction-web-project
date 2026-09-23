@@ -3,6 +3,7 @@
 import { useAuthSession } from "@/features/auth/components/auth-session-provider";
 import { formatUserRole } from "@/features/auth/format";
 import { NotificationPreferencesPanel } from "@/features/notifications/components/notification-preferences";
+import { OtpStatusPanel } from "@/features/smart-otp/components/otp-status";
 import { SecurityPanel } from "@/features/auth/components/security-panel";
 
 function formatDate(value: string) {
@@ -31,6 +32,7 @@ export function SettingsWorkspace() {
       </dl>
     </section>
     <SecurityPanel />
+    <OtpStatusPanel />
     <NotificationPreferencesPanel />
   </section>;
 }

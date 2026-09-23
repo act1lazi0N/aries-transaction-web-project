@@ -21,6 +21,8 @@ vi.mock("@/features/notifications/components/notification-preferences", () => ({
 }));
 vi.mock("@/features/auth/components/security-panel", () => ({ SecurityPanel: () => <section aria-label="Security">Security</section> }));
 
+vi.mock("@/features/smart-otp/components/otp-status", () => ({ OtpStatusPanel: () => <div>Smart OTP status</div> }));
+
 describe("SettingsWorkspace", () => {
   it("renders profile fields with clear read-only copy", () => {
     render(<SettingsWorkspace />);

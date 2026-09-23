@@ -11,7 +11,7 @@ const previewResponse = {
   fee: "10.00",
   debitTotal: "1010.00",
   currency: "VND",
-  warnings: [],
+  authorizationRequirement: "NONE" as const, enrollmentState: "UNAVAILABLE" as const, warnings: [],
 };
 
 describe("transfer API", () => {

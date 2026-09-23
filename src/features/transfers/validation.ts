@@ -23,7 +23,7 @@ export function validateTransferAccounts(draft: TransferDraft, eligibleAccountId
   }
   if (draft.mode === "EXTERNAL") {
     if (!draft.recipientAccountNumber.trim()) errors.recipientAccountNumber = "Enter the recipient account number.";
-  } else {
+  } else if (draft.mode === "OWN_ACCOUNTS") {
     if (!draft.toAccountId || !eligibleAccountIds.has(draft.toAccountId)) errors.toAccountId = "Choose an active VND destination account.";
     else if (draft.toAccountId === draft.sourceAccountId) errors.toAccountId = "Source and destination accounts must be different.";
   }
@@ -40,6 +40,9 @@ export function validateTransferDetails(draft: TransferDraft): TransferFieldErro
   return errors;
 }
 export function toTransferPreviewRequest(draft: TransferDraft): TransferPreviewRequest {
+  if (draft.mode === "QR") return draft.qr.type === "PAYMENT_REQUEST"
+    ? { sourceAccountId: draft.sourceAccountId, qrCodeId: draft.qr.qrCodeId }
+    : { sourceAccountId: draft.sourceAccountId, qrCodeId: draft.qr.qrCodeId, amount: draft.amount.trim(), description: draft.description.trim() || undefined };
   const description = draft.description.trim() || undefined;
   const common = {
     sourceAccountId: draft.sourceAccountId.trim(),
@@ -84,10 +87,11 @@ export function executeErrorDecision(error: unknown): ExecuteErrorDecision {
   if (!(error instanceof ApiError)) return { kind: "unknown" };
   const requestId = error.requestId ?? undefined;
   const code = error.code ?? undefined;
+  if (error.code === "RECOVERY_UNAVAILABLE") return { kind: "rejected", message: rejectedExecuteMessage(error), blocked: true };
   if (error.code === "TRANSFER_PREVIEW_UNAVAILABLE") {
     return { kind: "expired", message: "This preview is no longer available. Create a new preview before sending." };
   }
-  if (error.kind === "network" || error.kind === "server" || error.code === "DUPLICATE_IN_FLIGHT") {
+  if (error.kind === "network" || error.kind === "server" || error.kind === "unknown" || error.kind === "rate_limited" || error.kind === "unauthorized" || error.kind === "forbidden" || error.code === "DUPLICATE_IN_FLIGHT") {
     return { kind: "unknown", requestId, code };
   }
   if (error.code === "IDEMPOTENCY_CONFLICT" || error.code === "DUPLICATE_CONFLICT") {
@@ -110,6 +114,7 @@ export function executeErrorDecision(error: unknown): ExecuteErrorDecision {
 
 function rejectedExecuteMessage(error: ApiError): string {
   switch (error.code) {
+    case "RECOVERY_UNAVAILABLE": return "The transfer was not sent. Recovery storage is unavailable or another transfer needs checking. Reload Transfers before continuing.";
     case "INSUFFICIENT_BALANCE": return "The source account does not have enough available balance. No completed transfer was confirmed.";
     case "ACCOUNT_NOT_ACTIVE": return "An account is no longer active. Refresh your accounts and create a new preview.";
     case "CURRENCY_MISMATCH": return "The account currency no longer matches this VND transfer. Create a new preview with eligible accounts.";

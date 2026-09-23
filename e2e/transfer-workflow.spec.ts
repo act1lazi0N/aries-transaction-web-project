@@ -127,7 +127,7 @@ async function mockTransferApi(page: Page, accounts: (typeof sourceAccount)[]) {
         fee: "10.00",
         debitTotal: calls.preview.at(-1)?.amount === "2500.00" ? "2510.00" : "1010.00",
         currency: "VND",
-        warnings: [],
+        authorizationRequirement: "NONE" as const, enrollmentState: "UNAVAILABLE" as const, warnings: [],
       }));
       return;
     }
